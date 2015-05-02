@@ -3,30 +3,25 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading;
 
 namespace SecureStore
 {
     sealed public class SecretsManager
     {
         private byte[] _key;
-        private ConcurrentDictionary<string, EncryptedBlob> _secretsStore { get { return _vault.Data; } }
         private Vault _vault;
-        private ThreadLocal<BinaryFormatter> _formatter = new ThreadLocal<BinaryFormatter>(() => new BinaryFormatter());
-        private BinaryFormatter Formatter { get { return _formatter.Value; } }
 
         public void InitializeNewStore()
         {
             _vault = new Vault();
             _vault.IV = new byte[8];
             _vault.Data = new ConcurrentDictionary<string, EncryptedBlob>();
+
+            //Generate a new IV for password-based key derivation
             using (var rngCsp = new RNGCryptoServiceProvider())
             {
-                // Fill the array with a random value.
                 rngCsp.GetBytes(_vault.IV);
             }
         }
@@ -62,30 +57,30 @@ namespace SecureStore
 
         public void LoadSecretsFromFile(string path)
         {
-            var formatter = new BinaryFormatter();
-            using (var serializedStream = File.OpenRead(path))
+            using (var stream = new FileStream(path, FileMode.Open))
+            using (var reader = new StreamReader(stream, Encoding.UTF8))
             {
-                _vault = formatter.Deserialize<Vault>(serializedStream);
+                _vault = Jil.JSON.Deserialize<Vault>(reader);
             }
         }
 
         public T RetrieveSecret<T>(string name)
         {
-            var decrypted = Decrypt(_secretsStore[name]);
-            return Formatter.Deserialize<T>(decrypted);
+            var decrypted = Decrypt(_vault.Data[name]);
+            return Jil.JSON.Deserialize<T>(Encoding.UTF8.GetString(decrypted));
         }
 
         public void AddSecret<T>(string name, T value)
         {
-            _secretsStore[name] = Encrypt(Formatter.Serialize(value));
+            _vault.Data[name] = Encrypt(Encoding.UTF8.GetBytes(Jil.JSON.Serialize(value)));
         }
 
         public void SaveSecretsToFile(string path)
         {
-            var formatter = new BinaryFormatter();
-            using (var serializedStream = File.OpenWrite(path))
+            using (var stream = new FileStream(path, FileMode.Create))
+            using (var writer = new StreamWriter(stream, Encoding.UTF8))
             {
-                formatter.Serialize(serializedStream, _vault);
+                Jil.JSON.Serialize(_vault, writer);
             }
         }
 
