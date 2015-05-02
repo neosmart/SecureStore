@@ -1,0 +1,56 @@
+###################
+# compiled source #
+###################
+*.com
+*.class
+*.dll.config
+*.cache
+*.suo
+*.user
+####################
+# VS Upgrade stuff #
+####################
+UpgradeLog.XML
+_UpgradeReport_Files/
+#############
+# Mono #
+#############
+*.pidb
+*.userprefs
+###############
+# Directories #
+###############
+bin/
+obj/
+Debug/
+Release/
+x64/
+TestResults/
+ipch
+###################
+# Web publish log #
+###################
+*.Publish.xml
+#############
+# Resharper #
+#############
+/_ReSharper.*
+*.ReSharper.*
+######################
+# Logs and databases #
+######################
+*.log
+*.sqlite
+#############
+# OS generated files #
+######################
+.DS_Store?
+ehthumbs.db
+Icon?
+Thumbs.db
+*.sdf
+*.opensdf
+#############
+# NuGet #
+#############
+packages/
