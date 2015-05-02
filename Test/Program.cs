@@ -11,9 +11,7 @@ namespace Test
     {
         static void Main(string[] args)
         {
-            var secure = new SecretsManager();
-            
-            secure.InitializeNewStore();
+            var secure = SecretsManager.NewStore();
             secure.LoadKeyFromPassword("test123");
 
             var testSuite = new Dictionary<string, object>
@@ -35,27 +33,8 @@ namespace Test
             //Test saving
             secure.SaveSecretsToFile("encrypted.bin");
 
-            //Test load with key
-            var test1 = new SecretsManager();
-            
-            //Test it throws exception when trying to load a key but no store has been loaded
-            var exceptionThrown = false;
-            try
-            {
-                test1.LoadKeyFromPassword("test123");
-            }
-            catch (NoStoreLoadedException ex)
-            {
-                exceptionThrown = true;
-            }
-
-            if (!exceptionThrown)
-            {
-                throw new Exception("No exception was thrown when loading key without store!");
-            }
-
             //Test loading encrypted data from disk
-            test1.LoadSecretsFromFile("encrypted.bin");
+            var test1 = SecretsManager.LoadStore("encrypted.bin");
 
             //Test decrypting with previously-exported key file
             test1.LoadKeyFile("keyfile.bin");
@@ -73,8 +52,7 @@ namespace Test
             }
 
             //Test decryption from password
-            var test2 = new SecretsManager();
-            test2.LoadSecretsFromFile("encrypted.bin");
+            var test2 = SecretsManager.LoadStore("encrypted.bin");
             test2.LoadKeyFromPassword("test123");
 
             //Test decryption of basic int

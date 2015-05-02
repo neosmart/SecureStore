@@ -13,17 +13,22 @@ namespace SecureStore
         private byte[] _key;
         private Vault _vault;
 
-        public void InitializeNewStore()
-        {
-            _vault = new Vault();
-            _vault.IV = new byte[8];
-            _vault.Data = new ConcurrentDictionary<string, EncryptedBlob>();
+        private SecretsManager()
+        {            
+        }
 
-            //Generate a new IV for password-based key derivation
-            using (var rngCsp = new RNGCryptoServiceProvider())
-            {
-                rngCsp.GetBytes(_vault.IV);
-            }
+        public static SecretsManager NewStore()
+        {
+            var secretsManager = new SecretsManager();
+            secretsManager.InitializeNewStore();
+            return secretsManager;
+        }
+
+        public static SecretsManager LoadStore(string path)
+        {
+            var secretsManager = new SecretsManager();
+            secretsManager.LoadSecretsFromFile(path);
+            return secretsManager;
         }
 
         static private byte[] DerivePassword(string password, byte[] salt)
@@ -53,6 +58,19 @@ namespace SecureStore
                 throw new NoStoreLoadedException();
             }
             _key = DerivePassword(password, _vault.IV);
+        }
+
+        private void InitializeNewStore()
+        {
+            _vault = new Vault();
+            _vault.IV = new byte[8];
+            _vault.Data = new ConcurrentDictionary<string, EncryptedBlob>();
+
+            //Generate a new IV for password-based key derivation
+            using (var rngCsp = new RNGCryptoServiceProvider())
+            {
+                rngCsp.GetBytes(_vault.IV);
+            }
         }
 
         public void LoadSecretsFromFile(string path)
