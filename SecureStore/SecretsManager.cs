@@ -8,13 +8,13 @@ using System.Text;
 
 namespace SecureStore
 {
-    sealed public class SecretsManager
+    sealed public class SecretsManager : IDisposable
     {
         private byte[] _key;
         private Vault _vault;
 
         private SecretsManager()
-        {            
+        {
         }
 
         public static SecretsManager NewStore()
@@ -40,7 +40,7 @@ namespace SecureStore
         }
 
         //Load an encryption key from a file
-        public void LoadKeyFile(string path)
+        public void LoadKeyFromFile(string path)
         {
             _key = File.ReadAllBytes(path);
         }
@@ -67,13 +67,13 @@ namespace SecureStore
             _vault.Data = new ConcurrentDictionary<string, EncryptedBlob>();
 
             //Generate a new IV for password-based key derivation
-            using (var rngCsp = new RNGCryptoServiceProvider())
+            using (var rng = new RNGCryptoServiceProvider())
             {
-                rngCsp.GetBytes(_vault.IV);
+                rng.GetBytes(_vault.IV);
             }
         }
 
-        public void LoadSecretsFromFile(string path)
+        private void LoadSecretsFromFile(string path)
         {
             using (var stream = new FileStream(path, FileMode.Open))
             using (var reader = new StreamReader(stream, Encoding.UTF8))
@@ -142,6 +142,15 @@ namespace SecureStore
             }
 
             return blob;
+        }
+
+        public void Dispose()
+        {
+            //Overwrite key in memory before leaving
+            using (var rng = new RNGCryptoServiceProvider())
+            {
+                rng.GetBytes(_key);
+            }
         }
     }
 }
