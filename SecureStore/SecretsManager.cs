@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
@@ -62,7 +62,7 @@ namespace NeoSmart.SecureStore
         {
             _vault = new Vault();
             _vault.IV = new byte[8];
-            _vault.Data = new ConcurrentDictionary<string, EncryptedBlob>();
+            _vault.Data = new SortedDictionary<string, EncryptedBlob>();
 
             //Generate a new IV for password-based key derivation
             using (var rng = new RNGCryptoServiceProvider())
@@ -83,6 +83,17 @@ namespace NeoSmart.SecureStore
         public string Retrieve(string name)
         {
             return Retrieve<string>(name);
+        }
+
+        public bool TryRetrieve<T>(string name, out T value)
+        {
+            if (_vault.Data.ContainsKey(name))
+            {
+                value = Retrieve<T>(name);
+                return true;
+            }
+            value = default(T);
+            return false;
         }
 
         public T Retrieve<T>(string name)

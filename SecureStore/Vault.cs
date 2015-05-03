@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 
 namespace NeoSmart.SecureStore
 {
@@ -7,6 +8,6 @@ namespace NeoSmart.SecureStore
     sealed internal class Vault
     {
         public byte[] IV;
-        public ConcurrentDictionary<string, EncryptedBlob> Data;
+        public SortedDictionary<string, EncryptedBlob> Data;
     }
 }
