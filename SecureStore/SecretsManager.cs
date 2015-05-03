@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace SecureStore
+namespace NeoSmart.SecureStore
 {
     sealed public class SecretsManager : IDisposable
     {
@@ -82,13 +80,18 @@ namespace SecureStore
             }
         }
 
-        public T RetrieveSecret<T>(string name)
+        public string Retrieve(string name)
+        {
+            return Retrieve<string>(name);
+        }
+
+        public T Retrieve<T>(string name)
         {
             var decrypted = Decrypt(_vault.Data[name]);
             return Jil.JSON.Deserialize<T>(Encoding.UTF8.GetString(decrypted));
         }
 
-        public void AddSecret<T>(string name, T value)
+        public void Set<T>(string name, T value)
         {
             _vault.Data[name] = Encrypt(Encoding.UTF8.GetBytes(Jil.JSON.Serialize(value)));
         }

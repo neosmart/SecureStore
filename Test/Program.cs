@@ -1,11 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using SecureStore;
 
-namespace Test
+namespace NeoSmart.SecureStore.Test
 {
     class Program
     {
@@ -25,7 +21,7 @@ namespace Test
                 //Test adding
                 foreach (var secret in testSuite)
                 {
-                    secure.AddSecret(secret.Key, secret.Value);
+                    secure.Set(secret.Key, secret.Value);
                 }
 
                 //Test exporting the key (also so we can test key <---> password compatibility later)
@@ -43,13 +39,13 @@ namespace Test
                 test1.LoadKeyFromFile("keyfile.bin");
 
                 //Test decryption of basic string
-                if (test1.RetrieveSecret<string>("string") != (string) testSuite["string"])
+                if (test1.Retrieve<string>("string") != (string) testSuite["string"])
                 {
                     throw new Exception("Problem retrieving previously-saved string with key from file!");
                 }
 
                 //Test decryption of complex type (GUID)
-                if (test1.RetrieveSecret<Guid>("guid") != (Guid) testSuite["guid"])
+                if (test1.Retrieve<Guid>("guid") != (Guid) testSuite["guid"])
                 {
                     throw new Exception("Problem retrieving previously-saved GUID with key from file!");
                 }
@@ -61,7 +57,7 @@ namespace Test
                 test2.LoadKeyFromPassword("test123");
 
                 //Test decryption of basic int
-                if (test2.RetrieveSecret<int>("int") != (int) testSuite["int"])
+                if (test2.Retrieve<int>("int") != (int) testSuite["int"])
                 {
                     throw new Exception("Problem retrieving previously-saved int with key from password!");
                 }
