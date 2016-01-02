@@ -73,7 +73,7 @@ namespace NeoSmart.SecureStore
 
         private void LoadSecretsFromFile(string path)
         {
-            using (var stream = new FileStream(path, FileMode.Open))
+            using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read))
             using (var reader = new StreamReader(stream, Encoding.UTF8))
             {
                 _vault = Jil.JSON.Deserialize<Vault>(reader);
@@ -109,7 +109,7 @@ namespace NeoSmart.SecureStore
 
         public void SaveSecretsToFile(string path)
         {
-            using (var stream = new FileStream(path, FileMode.Create))
+            using (var stream = new FileStream(path, FileMode.Create, FileAccess.ReadWrite))
             using (var writer = new StreamWriter(stream, Encoding.UTF8))
             {
                 Jil.JSON.Serialize(_vault, writer);
