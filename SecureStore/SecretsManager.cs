@@ -169,9 +169,13 @@ namespace NeoSmart.SecureStore
         public void Dispose()
         {
             //Overwrite key in memory before leaving
-            using (var rng = new RNGCryptoServiceProvider())
+            if (_key != null)
             {
-                rng.GetBytes(_key);
+                using (var rng = new RNGCryptoServiceProvider())
+                {
+                    rng.GetBytes(_key);
+                }
+                _key = null;
             }
         }
     }
