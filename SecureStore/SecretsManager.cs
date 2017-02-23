@@ -121,6 +121,11 @@ namespace NeoSmart.SecureStore
 
         private byte[] Decrypt(EncryptedBlob blob)
         {
+            if (_key == null)
+            {
+                throw new NoKeyLoadedException();
+            }
+
             using (var aes = new AesCryptoServiceProvider())
             {
                 aes.Key = _key;
