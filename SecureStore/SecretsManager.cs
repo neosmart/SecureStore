@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using Newtonsoft.Json;
 
 namespace NeoSmart.SecureStore
 {
@@ -75,8 +76,9 @@ namespace NeoSmart.SecureStore
         {
             using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read))
             using (var reader = new StreamReader(stream, Encoding.UTF8))
+            using (var jreader = new JsonTextReader(reader))
             {
-                _vault = Jil.JSON.Deserialize<Vault>(reader);
+                _vault = JsonSerializer.Create().Deserialize<Vault>(jreader);
             }
         }
 
@@ -99,20 +101,21 @@ namespace NeoSmart.SecureStore
         public T Retrieve<T>(string name)
         {
             var decrypted = Decrypt(_vault.Data[name]);
-            return Jil.JSON.Deserialize<T>(Encoding.UTF8.GetString(decrypted));
+            return JsonConvert.DeserializeObject<T>(Encoding.UTF8.GetString(decrypted));
         }
 
         public void Set<T>(string name, T value)
         {
-            _vault.Data[name] = Encrypt(Encoding.UTF8.GetBytes(Jil.JSON.Serialize(value)));
+            _vault.Data[name] = Encrypt(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(value)));
         }
 
         public void SaveSecretsToFile(string path)
         {
             using (var stream = new FileStream(path, FileMode.Create, FileAccess.ReadWrite))
             using (var writer = new StreamWriter(stream, Encoding.UTF8))
+            using (var jwriter = new JsonTextWriter(writer))
             {
-                Jil.JSON.Serialize(_vault, writer);
+                JsonSerializer.Create().Serialize(jwriter, _vault);
             }
         }
 
