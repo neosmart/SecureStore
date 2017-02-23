@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+
+  <PropertyGroup>
+    <HintPathPackageDir Condition="'$(HintPathPackageDir)' == ''">$( [System.IO.Path]::Combine( $(SolutionDir) , 'packages' ) )</HintPathPackageDir>
+  </PropertyGroup>
+  
+  <Target Name="ReplaceHintPathPackageDirForAssemblyReferences" BeforeTargets="ResolveAssemblyReferences">
+
+    <PropertyGroup>
+      <_HintPathPackagePattern>(?i)^(.+\\)?packages\\</_HintPathPackagePattern>
+    </PropertyGroup>
+    
+    <ItemGroup>
+      <_HintPathPackageDirReference Include="@(Reference)" 
+                                    Condition=" '%(Reference.HintPath)' != '' and '$( [System.Text.RegularExpressions.Regex]::IsMatch( %(Reference.HintPath) , $(_HintPathPackagePattern) ) )' == 'true' ">
+        <HintPath>$( [System.IO.Path]::Combine( $(HintPathPackageDir) , $( [System.Text.RegularExpressions.Regex]::Replace( %(Reference.HintPath) , $(_HintPathPackagePattern) , '' ) ) ) )</HintPath>
+      </_HintPathPackageDirReference>
+
+      <Reference Remove="@(Reference)"
+                 Condition=" '%(Reference.HintPath)' != '' and '$( [System.Text.RegularExpressions.Regex]::IsMatch( %(Reference.HintPath) , $(_HintPathPackagePattern) ) )' == 'true' " />
+      <Reference Include="@(_HintPathPackageDirReference)" />
+    </ItemGroup>
+
+  </Target>
+
+</Project>
