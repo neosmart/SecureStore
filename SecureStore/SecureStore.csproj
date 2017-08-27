@@ -5,17 +5,17 @@
     <AssemblyName>NeoSmart.SecureStore</AssemblyName>
     <RootNamespace>NeoSmart.SecureStore</RootNamespace>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <PackageId>Unicode.net</PackageId>
+    <PackageId>SecureStore</PackageId>
     <Version>0.2</Version>
     <Authors>NeoSmart Technologies, Mahmoud Al-Qudsi</Authors>
     <Company>NeoSmart Technologies</Company>
-    <Description>A simple but secure secrets storage library for .NET and .NET Core, with on-disk encrypted storage.</Description>
+    <Description>A simple but secure secrets manager library for .NET and .NET Core, with on-disk encrypted storage.</Description>
     <Copyright>Copyright NeoSmart Technologies 2015 - 2017</Copyright>
     <PackageLicenseUrl>https://cdn.rawgit.com/neosmart/SecureStore/master/LICENSE</PackageLicenseUrl>
     <PackageProjectUrl>https://github.com/neosmart/SecureStore</PackageProjectUrl>
     <RepositoryUrl>https://github.com/neosmart/SecureStore</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <PackageTags>secrets, encryption, secure</PackageTags>
+    <PackageTags>secrets, encryption, secure, secrets manager</PackageTags>
     <PackageReleaseNotes>Initial release for .NET Core</PackageReleaseNotes>
     <AssemblyVersion>0.2.0.0</AssemblyVersion>
     <FileVersion>0.2.0.0</FileVersion>
