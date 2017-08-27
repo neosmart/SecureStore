@@ -5,6 +5,10 @@ using System.Security.Cryptography;
 using System.Text;
 using Newtonsoft.Json;
 
+#if NETSTANDARD1_3
+using Microsoft.AspNetCore.Cryptography.KeyDerivation;
+#endif
+
 namespace NeoSmart.SecureStore
 {
     sealed public class SecretsManager : IDisposable
@@ -32,10 +36,16 @@ namespace NeoSmart.SecureStore
 
         static private byte[] DerivePassword(string password, byte[] salt)
         {
+#if NETSTANDARD1_3
+            return KeyDerivation.Pbkdf2(password, salt, KeyDerivationPrf.HMACSHA1, 10000, 32);
+#elif NET20 || NET30 || NET35
+            return new Rfc2898DeriveBytes(password, salt, 10000).GetBytes(32);
+#else
             using (var pbkdf2 = new Rfc2898DeriveBytes(password, salt, 10000))
             {
                 return pbkdf2.GetBytes(32);
             }
+#endif
         }
 
         //Load an encryption key from a file
@@ -66,10 +76,17 @@ namespace NeoSmart.SecureStore
             _vault.Data = new SortedDictionary<string, EncryptedBlob>();
 
             //Generate a new IV for password-based key derivation
-            using (var rng = new RNGCryptoServiceProvider())
-            {
-                rng.GetBytes(_vault.IV);
-            }
+#if NETSTANDARD1_3
+            var rng = RandomNumberGenerator.Create();
+#else
+            var rng = new RNGCryptoServiceProvider();
+#endif
+
+            rng.GetBytes(_vault.IV);
+
+#if !NET20 && !NET30 && !NET35
+            rng.Dispose();
+#endif
         }
 
         private void LoadSecretsFromFile(string path)
@@ -118,52 +135,63 @@ namespace NeoSmart.SecureStore
                 JsonSerializer.Create().Serialize(jwriter, _vault);
             }
         }
-
-        private byte[] Decrypt(EncryptedBlob blob)
-        {
-            if (_key == null)
-            {
-                throw new NoKeyLoadedException();
-            }
-
-            using (var aes = new AesCryptoServiceProvider())
-            {
-                aes.Key = _key;
-                aes.IV = blob.IV;
-
-                using (var outputStream = new MemoryStream())
-                using (var memstream = new MemoryStream(blob.Payload))
-                {
-                    using (var cryptostream = new CryptoStream(memstream, aes.CreateDecryptor(), CryptoStreamMode.Read))
-                    {
-                        cryptostream.CopyTo(outputStream);
-                    }
-                    return outputStream.ToArray();
-                }
-            }
-        }
-
+        
         private EncryptedBlob Encrypt(byte[] input)
         {
             EncryptedBlob blob;
 
-            using (var aes = new AesCryptoServiceProvider())
+            SymmetricAlgorithm aes;
+
+#if NETSTANDARD1_3
+        aes = Aes.Create();
+#elif NET20 || NET30
+        aes = Rijndael.Create();
+#else
+        aes = new AesCryptoServiceProvider();
+#endif
+
+            using (aes)
             {
+                aes.Mode = CipherMode.CBC;
                 aes.Key = _key;
+                aes.BlockSize = 128;
                 aes.GenerateIV();
+
                 blob.IV = aes.IV;
 
-                using (var memstream = new MemoryStream())
+                using (var encryptor = aes.CreateEncryptor())
                 {
-                    using (var cryptostream = new CryptoStream(memstream, aes.CreateEncryptor(), CryptoStreamMode.Write))
-                    {
-                        cryptostream.Write(input, 0, input.Length);
-                    }
-                    blob.Payload = memstream.ToArray();
+                    blob.Payload = encryptor.TransformFinalBlock(input, 0, input.Length);
                 }
             }
 
             return blob;
+        }
+
+        private byte[] Decrypt(EncryptedBlob blob)
+        {
+            SymmetricAlgorithm aes;
+
+#if NETSTANDARD1_3
+            aes = Aes.Create();
+#elif NET20 || NET30
+            aes = Rijndael.Create();
+#else
+            aes = new AesCryptoServiceProvider();
+#endif
+
+            using (aes)
+            {
+                aes.Mode = CipherMode.CBC;
+                aes.Key = _key;
+                aes.BlockSize = 128;
+                aes.IV = blob.IV;
+
+                using (var decryptor = aes.CreateDecryptor())
+                {
+                    return decryptor.TransformFinalBlock(blob.Payload, 0, blob.Payload.Length);
+                }
+            }
         }
 
         public void Dispose()
@@ -171,11 +199,17 @@ namespace NeoSmart.SecureStore
             //Overwrite key in memory before leaving
             if (_key != null)
             {
-                using (var rng = new RNGCryptoServiceProvider())
-                {
-                    rng.GetBytes(_key);
-                }
+#if NETSTANDARD1_3
+                var rng = RandomNumberGenerator.Create();
+#else
+                var rng = new RNGCryptoServiceProvider();
+#endif
+                rng.GetBytes(_key);
                 _key = null;
+
+#if !NET20 && !NET30 && !NET35
+            rng.Dispose();
+#endif
             }
         }
     }

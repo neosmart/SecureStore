@@ -54,3 +54,5 @@ Thumbs.db
 # NuGet #
 #############
 packages/
+.nuget
+.vs
