@@ -135,7 +135,7 @@ namespace NeoSmart.SecureStore
                 JsonSerializer.Create().Serialize(jwriter, _vault);
             }
         }
-        
+
         private EncryptedBlob Encrypt(byte[] input)
         {
             EncryptedBlob blob;
