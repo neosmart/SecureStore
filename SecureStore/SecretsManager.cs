@@ -4,6 +4,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using Newtonsoft.Json;
+using System.Security;
 
 #if NETSTANDARD1_3
 using Microsoft.AspNetCore.Cryptography.KeyDerivation;
@@ -34,14 +35,14 @@ namespace NeoSmart.SecureStore
             return secretsManager;
         }
 
-        static private byte[] DerivePassword(string password, byte[] salt)
+        static private byte[] DerivePassword(SecureString password, byte[] salt)
         {
 #if NETSTANDARD1_3
-            return KeyDerivation.Pbkdf2(password, salt, KeyDerivationPrf.HMACSHA1, 10000, 32);
+            return KeyDerivation.Pbkdf2(password.ToString(), salt, KeyDerivationPrf.HMACSHA1, 10000, 32);
 #elif NET20 || NET30 || NET35
-            return new Rfc2898DeriveBytes(password, salt, 10000).GetBytes(32);
+            return new Rfc2898DeriveBytes(password.ToString(), salt, 10000).GetBytes(32);
 #else
-            using (var pbkdf2 = new Rfc2898DeriveBytes(password, salt, 10000))
+            using (var pbkdf2 = new Rfc2898DeriveBytes(password.ToString(), salt, 10000))
             {
                 return pbkdf2.GetBytes(32);
             }
@@ -60,13 +61,28 @@ namespace NeoSmart.SecureStore
         }
 
         //Derive an encryption key from a password
+        public void LoadKeyFromPassword(SecureString password)
+        {
+            if (_vault == null)
+            {
+                throw new NoStoreLoadedException();
+            }
+
+            _key = DerivePassword(password, _vault.IV);
+        }
+
         public void LoadKeyFromPassword(string password)
         {
             if (_vault == null)
             {
                 throw new NoStoreLoadedException();
             }
-            _key = DerivePassword(password, _vault.IV);
+
+            using (var ss = new SecureString())
+            {
+                ss.FromInsecure(password);
+                _key = DerivePassword(ss, _vault.IV);
+            }
         }
 
         private void InitializeNewStore()
@@ -104,6 +120,12 @@ namespace NeoSmart.SecureStore
             return Retrieve<string>(name);
         }
 
+        public T Retrieve<T>(string name)
+        {
+            var decrypted = Decrypt(_vault.Data[name]);
+            return JsonConvert.DeserializeObject<T>(Encoding.UTF8.GetString(decrypted));
+        }
+
         public bool TryRetrieve<T>(string name, out T value)
         {
             if (_vault.Data.ContainsKey(name))
@@ -113,12 +135,6 @@ namespace NeoSmart.SecureStore
             }
             value = default(T);
             return false;
-        }
-
-        public T Retrieve<T>(string name)
-        {
-            var decrypted = Decrypt(_vault.Data[name]);
-            return JsonConvert.DeserializeObject<T>(Encoding.UTF8.GetString(decrypted));
         }
 
         public void Set<T>(string name, T value)
