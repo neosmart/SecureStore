@@ -126,6 +126,16 @@ namespace NeoSmart.SecureStore
             _vault.Data[name] = Encrypt(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(value)));
         }
 
+        public bool Delete(string name)
+        {
+            if (_vault.Data.ContainsKey(name))
+            {
+                _vault.Data.Remove(name);
+                return true;
+            }
+            return false;
+        }
+
         public void SaveSecretsToFile(string path)
         {
             using (var stream = new FileStream(path, FileMode.Create, FileAccess.ReadWrite))
