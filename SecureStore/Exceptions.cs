@@ -30,4 +30,26 @@ namespace NeoSmart.SecureStore
         {
         }
     }
+
+    public class KeyAlreadyLoadedException : SecretsException
+    {
+        public KeyAlreadyLoadedException(string message) : base(message)
+        {
+        }
+
+        public KeyAlreadyLoadedException() : this("A key has already been loaded!")
+        {
+        }
+    }
+
+    public class InvalidKeyFileException : SecretsException
+    {
+        public InvalidKeyFileException(string message) : base(message)
+        {
+        }
+
+        public InvalidKeyFileException() : this("The selected file does not contain a valid encryption key!")
+        {
+        }
+    }
 }

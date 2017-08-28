@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Newtonsoft.Json;
 using System.Security;
+using System.Runtime.InteropServices;
 
 #if NETSTANDARD1_3
 using Microsoft.AspNetCore.Cryptography.KeyDerivation;
@@ -14,7 +15,10 @@ namespace NeoSmart.SecureStore
 {
     sealed public class SecretsManager : IDisposable
     {
-        private byte[] _key;
+        private const int KEYLENGTH = 256 / 8;
+        private const int PBKDF2ROUNDS = 10000;
+
+        private SecureBuffer _key;
         private Vault _vault;
 
         private SecretsManager()
@@ -38,13 +42,13 @@ namespace NeoSmart.SecureStore
         static private byte[] DerivePassword(SecureString password, byte[] salt)
         {
 #if NETSTANDARD1_3
-            return KeyDerivation.Pbkdf2(password.ToString(), salt, KeyDerivationPrf.HMACSHA1, 10000, 32);
+            return KeyDerivation.Pbkdf2(password.ToString(), salt, KeyDerivationPrf.HMACSHA1, PBKDF2ROUNDS, 32);
 #elif NET20 || NET30 || NET35
-            return new Rfc2898DeriveBytes(password.ToString(), salt, 10000).GetBytes(32);
+            return new Rfc2898DeriveBytes(password.ToString(), salt, PBKDF2ROUNDS).GetBytes(32);
 #else
-            using (var pbkdf2 = new Rfc2898DeriveBytes(password.ToString(), salt, 10000))
+            using (var pbkdf2 = new Rfc2898DeriveBytes(password.ToString(), salt, PBKDF2ROUNDS))
             {
-                return pbkdf2.GetBytes(32);
+                return pbkdf2.GetBytes(KEYLENGTH);
             }
 #endif
         }
@@ -52,23 +56,62 @@ namespace NeoSmart.SecureStore
         //Load an encryption key from a file
         public void LoadKeyFromFile(string path)
         {
-            _key = File.ReadAllBytes(path);
+            if (_key != null)
+            {
+                throw new KeyAlreadyLoadedException();
+            }
+
+            //We don't know how .NET buffers things in memory, so we write it ourselves for maximum security
+            //avoid excess buffering where possible, even if slow
+            using (var file = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.None))
+            {
+                if (file.Length != KEYLENGTH)
+                {
+                    throw new InvalidKeyFileException();
+                }
+
+                _key = new SecureBuffer(KEYLENGTH);
+
+                int start = 0;
+                const int blockSize = 1024;
+                for (var bytesRemaining = KEYLENGTH; bytesRemaining > 0;)
+                {
+                    int toRead = Math.Min(blockSize, bytesRemaining);
+                    int read = file.Read(_key.Buffer, start, toRead);
+                    start += read;
+                    bytesRemaining -= read;
+                }
+            }
         }
 
         public void SaveKeyFile(string path)
         {
-            File.WriteAllBytes(path, _key);
+            //We don't know how .NET buffers things in memory, so we write it ourselves for maximum security
+            //avoid excess buffering where possible, even if slow
+            using (var file = File.Create(path, 1, FileOptions.WriteThrough))
+            {
+                int start = 0;
+                const int blockSize = 1024;
+                for (var bytesRemaining = _key.Buffer.Length; bytesRemaining > 0;)
+                {
+                    int toWrite = Math.Min(blockSize, bytesRemaining);
+                    file.Write(_key.Buffer, start, toWrite);
+                    start += toWrite;
+                    bytesRemaining -= toWrite;
+                }
+            }
         }
 
         //Derive an encryption key from a password
         public void LoadKeyFromPassword(SecureString password)
         {
-            if (_vault == null)
+            if (_key != null)
             {
-                throw new NoStoreLoadedException();
+                throw new KeyAlreadyLoadedException();
             }
 
-            _key = DerivePassword(password, _vault.IV);
+            var insecure = DerivePassword(password, _vault.IV);
+            _key = new SecureBuffer(insecure);
         }
 
         public void LoadKeyFromPassword(string password)
@@ -81,7 +124,8 @@ namespace NeoSmart.SecureStore
             using (var ss = new SecureString())
             {
                 ss.FromInsecure(password);
-                _key = DerivePassword(ss, _vault.IV);
+                var insecure = DerivePassword(ss, _vault.IV);
+                _key = new SecureBuffer(insecure);
             }
         }
 
@@ -179,7 +223,7 @@ namespace NeoSmart.SecureStore
             using (aes)
             {
                 aes.Mode = CipherMode.CBC;
-                aes.Key = _key;
+                aes.Key = _key.Buffer;
                 aes.BlockSize = 128;
                 aes.GenerateIV();
 
@@ -209,7 +253,7 @@ namespace NeoSmart.SecureStore
             using (aes)
             {
                 aes.Mode = CipherMode.CBC;
-                aes.Key = _key;
+                aes.Key = _key.Buffer;
                 aes.BlockSize = 128;
                 aes.IV = blob.IV;
 
@@ -222,20 +266,10 @@ namespace NeoSmart.SecureStore
 
         public void Dispose()
         {
-            //Overwrite key in memory before leaving
             if (_key != null)
             {
-#if NETSTANDARD1_3
-                var rng = RandomNumberGenerator.Create();
-#else
-                var rng = new RNGCryptoServiceProvider();
-#endif
-                rng.GetBytes(_key);
+                _key.Dispose();
                 _key = null;
-
-#if !NET20 && !NET30 && !NET35
-            rng.Dispose();
-#endif
             }
         }
     }
