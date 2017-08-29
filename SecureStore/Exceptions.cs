@@ -9,17 +9,6 @@ namespace NeoSmart.SecureStore
         }
     }
 
-    public class NoStoreLoadedException : SecretsException
-    {
-        public NoStoreLoadedException(string message) : base(message)
-        {
-        }
-
-        public NoStoreLoadedException() : this("Must first load an existing vault or create a new vault!")
-        {
-        }
-    }
-
     public class NoKeyLoadedException : SecretsException
     {
         public NoKeyLoadedException(string message) : base(message)
@@ -49,6 +38,17 @@ namespace NeoSmart.SecureStore
         }
 
         public InvalidKeyFileException() : this("The selected file does not contain a valid encryption key!")
+        {
+        }
+    }
+
+    public class TamperedCipherTextException : SecretsException
+    {
+        public TamperedCipherTextException(string message) : base(message)
+        {
+        }
+
+        public TamperedCipherTextException() : this("The ciphertext in this secure store has been tampered with and is no longer valid!")
         {
         }
     }

@@ -15,38 +15,23 @@ namespace NeoSmart.SecureStore
 {
     sealed public class SecretsManager : IDisposable
     {
-        private const int KEYLENGTH = 256 / 8;
+        private const int KEYCOUNT = 2;
+        private const int KEYLENGTH = 128 / 8;
         private const int PBKDF2ROUNDS = 10000;
+        private const int IVSIZE = 8;
 
-        private SecureBuffer _key;
         private Vault _vault;
+        private SecureBuffer _encryptionKey;
+        private SecureBuffer _hmacKey;
 
         private SecretsManager()
         {
         }
 
-        public static SecretsManager CreateStore(string password)
+        public static SecretsManager CreateStore()
         {
             var secretsManager = new SecretsManager();
             secretsManager.InitializeNewStore();
-            secretsManager.LoadKeyFromPassword(password);
-            return secretsManager;
-        }
-
-        public static SecretsManager CreateStore(NewStoreMode mode, string path)
-        {
-            var secretsManager = new SecretsManager();
-            secretsManager.InitializeNewStore();
-            if (mode == NewStoreMode.CreateNewKeyFile)
-            {
-                secretsManager.GenerateKey();
-                secretsManager.ExportKeyFile(path);
-            }
-            else
-            {
-                secretsManager.LoadKeyFromFile(path);
-            }
-
             return secretsManager;
         }
 
@@ -72,36 +57,24 @@ namespace NeoSmart.SecureStore
 #endif
         }
 
-        static private byte[] DerivePassword(SecureString password, byte[] salt)
-        {
-#if NETSTANDARD1_3
-            return KeyDerivation.Pbkdf2(password.ToString(), salt, KeyDerivationPrf.HMACSHA1, PBKDF2ROUNDS, 32);
-#elif NET20 || NET30 || NET35
-            return new Rfc2898DeriveBytes(password.ToString(), salt, PBKDF2ROUNDS).GetBytes(32);
-#else
-            using (var pbkdf2 = new Rfc2898DeriveBytes(password.ToString(), salt, PBKDF2ROUNDS))
-            {
-                return pbkdf2.GetBytes(KEYLENGTH);
-            }
-#endif
-        }
-
         //Generate a new key for a new store
-        private void GenerateKey()
+        public void GenerateKey()
         {
-            if (_key != null)
+            if (_encryptionKey != null)
             {
                 throw new KeyAlreadyLoadedException();
             }
 
-            _key = new SecureBuffer(KEYLENGTH);
-            GenerateBytes(_key.Buffer);
+            _encryptionKey = new SecureBuffer(KEYLENGTH);
+            GenerateBytes(_encryptionKey.Buffer);
+            _hmacKey = new SecureBuffer(KEYLENGTH);
+            GenerateBytes(_hmacKey.Buffer);
         }
 
         //Load an encryption key from a file
         public void LoadKeyFromFile(string path)
         {
-            if (_key != null)
+            if (_encryptionKey != null)
             {
                 throw new KeyAlreadyLoadedException();
             }
@@ -110,74 +83,85 @@ namespace NeoSmart.SecureStore
             //avoid excess buffering where possible, even if slow
             using (var file = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.None))
             {
-                if (file.Length != KEYLENGTH)
+                if (file.Length != KEYLENGTH * KEYCOUNT)
                 {
                     throw new InvalidKeyFileException();
                 }
 
-                _key = new SecureBuffer(KEYLENGTH);
+                _encryptionKey = new SecureBuffer(KEYLENGTH);
+                _hmacKey = new SecureBuffer(KEYLENGTH);
 
-                int start = 0;
-                const int blockSize = 1024;
-                for (var bytesRemaining = KEYLENGTH; bytesRemaining > 0;)
+                foreach (var buffer in new [] { _encryptionKey.Buffer, _hmacKey.Buffer })
                 {
-                    int toRead = Math.Min(blockSize, bytesRemaining);
-                    int read = file.Read(_key.Buffer, start, toRead);
-                    start += read;
-                    bytesRemaining -= read;
+                    int bytesRead = file.Read(buffer, 0, KEYLENGTH);
+                    if (bytesRead != KEYLENGTH)
+                    {
+                        throw new IOException("Unable to read from key file!");
+                    }
                 }
             }
         }
 
-        public void ExportKeyFile(string path)
+        public void ExportKey(string path)
         {
             //We don't know how .NET buffers things in memory, so we write it ourselves for maximum security
             //avoid excess buffering where possible, even if slow
             using (var file = File.Create(path, 1, FileOptions.WriteThrough))
             {
-                int start = 0;
-                const int blockSize = 1024;
-                for (var bytesRemaining = _key.Buffer.Length; bytesRemaining > 0;)
-                {
-                    int toWrite = Math.Min(blockSize, bytesRemaining);
-                    file.Write(_key.Buffer, start, toWrite);
-                    start += toWrite;
-                    bytesRemaining -= toWrite;
-                }
+                file.Write(_encryptionKey.Buffer, 0, KEYLENGTH);
+                file.Write(_hmacKey.Buffer, 0, KEYLENGTH);
+            }
+        }
+
+        static private byte[] DerivePassword(string password, byte[] salt)
+        {
+#if NETSTANDARD1_3
+            return KeyDerivation.Pbkdf2(password, salt, KeyDerivationPrf.HMACSHA1, PBKDF2ROUNDS, KEYLENGTH * KEYCOUNT);
+#elif NET20 || NET30 || NET35
+            return new Rfc2898DeriveBytes(password, salt, PBKDF2ROUNDS).GetBytes(KEYLENGTH * KEYCOUNT);
+#else
+            using (var pbkdf2 = new Rfc2898DeriveBytes(password, salt, PBKDF2ROUNDS))
+            {
+                return pbkdf2.GetBytes(KEYLENGTH * KEYCOUNT);
+            }
+#endif
+        }
+
+        private void SplitKey(byte[] insecure)
+        {
+            //While the consensus is that AES and HMAC are "sufficiently different" that reusing
+            //the same key for Encrypt-then-MAC is probably safe, it's not something provable
+            //and therefore (esp. since we can without too much additional burden) we should use two
+            //separate keys.
+            using (var temp = new SecureBuffer(insecure))
+            {
+                _encryptionKey = new SecureBuffer(KEYLENGTH);
+                _hmacKey = new SecureBuffer(KEYLENGTH);
+
+                Array.Copy(temp.Buffer, 0, _encryptionKey.Buffer, 0, KEYLENGTH);
+                Array.Copy(temp.Buffer, KEYLENGTH, _hmacKey.Buffer, 0, KEYLENGTH);
             }
         }
 
         //Derive an encryption key from a password
-        public void LoadKeyFromPassword(SecureString password)
+        public void LoadKeyFromPassword(string password)
         {
-            if (_key != null)
+            if (_encryptionKey != null)
             {
                 throw new KeyAlreadyLoadedException();
             }
 
             var insecure = DerivePassword(password, _vault.IV);
-            _key = new SecureBuffer(insecure);
-        }
-
-        public void LoadKeyFromPassword(string password)
-        {
-            if (_vault == null)
+            using (var sb = new SecureBuffer(insecure))
             {
-                throw new NoStoreLoadedException();
-            }
-
-            using (var ss = new SecureString())
-            {
-                ss.FromInsecure(password);
-                var insecure = DerivePassword(ss, _vault.IV);
-                _key = new SecureBuffer(insecure);
+                SplitKey(insecure);
             }
         }
 
         private void InitializeNewStore()
         {
             _vault = new Vault();
-            _vault.IV = new byte[8];
+            _vault.IV = new byte[IVSIZE];
             _vault.Data = new SortedDictionary<string, EncryptedBlob>();
 
             //Generate a new IV for password-based key derivation
@@ -201,8 +185,11 @@ namespace NeoSmart.SecureStore
 
         public T Retrieve<T>(string name)
         {
-            var decrypted = Decrypt(_vault.Data[name]);
-            return JsonConvert.DeserializeObject<T>(Encoding.UTF8.GetString(decrypted));
+            using (var decrypted = new SecureBuffer(Decrypt(_vault.Data[name])))
+            {
+                //the conversion from bytes to string involves some non-shredded memory
+                return JsonConvert.DeserializeObject<T>(Encoding.UTF8.GetString(decrypted.Buffer));
+            }
         }
 
         public bool TryRetrieve<T>(string name, out T value)
@@ -218,7 +205,12 @@ namespace NeoSmart.SecureStore
 
         public void Set<T>(string name, T value)
         {
-            _vault.Data[name] = Encrypt(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(value)));
+            //JsonConvert and the UTF8 conversion likely involve non-shredded memory
+            var insecure = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(value));
+            using (var secured = new SecureBuffer(insecure))
+            {
+                _vault.Data[name] = Encrypt(secured);
+            }
         }
 
         public bool Delete(string name)
@@ -241,7 +233,7 @@ namespace NeoSmart.SecureStore
             }
         }
 
-        private EncryptedBlob Encrypt(byte[] input)
+        private EncryptedBlob Encrypt(SecureBuffer input)
         {
             EncryptedBlob blob;
 
@@ -258,7 +250,7 @@ namespace NeoSmart.SecureStore
             using (aes)
             {
                 aes.Mode = CipherMode.CBC;
-                aes.Key = _key.Buffer;
+                aes.Key = _encryptionKey.Buffer;
                 aes.BlockSize = 128;
                 aes.GenerateIV();
 
@@ -266,11 +258,38 @@ namespace NeoSmart.SecureStore
 
                 using (var encryptor = aes.CreateEncryptor())
                 {
-                    blob.Payload = encryptor.TransformFinalBlock(input, 0, input.Length);
+                    blob.Payload = encryptor.TransformFinalBlock(input.Buffer, 0, input.Buffer.Length);
                 }
             }
 
+            blob.Hmac = Authenticate(blob.IV, blob.Payload);
+
             return blob;
+        }
+
+        private byte[] Authenticate(byte[] iv, byte[] encrypted)
+        {
+#if NETSTANDARD1_3
+            var hmac = new System.Security.Cryptography.HMACSHA1(_hmacKey.Buffer);
+            var composite = new byte[iv.Length + encrypted.Length];
+            Array.Copy(iv, 0, composite, 0, iv.Length);
+            Array.Copy(encrypted, 0, composite, iv.Length, encrypted.Length);
+            var result = hmac.ComputeHash(composite);
+#else
+            var hmac = System.Security.Cryptography.HMACSHA1.Create();
+            hmac.Key = _hmacKey.Buffer;
+
+            hmac.TransformBlock(iv, 0, iv.Length, iv, 0);
+            hmac.TransformFinalBlock(encrypted, 0, encrypted.Length);
+
+            var result = hmac.Hash;
+#endif
+
+#if !NET20 && !NET30 && !NET35
+            hmac.Dispose();
+#endif
+
+            return result;
         }
 
         private byte[] Decrypt(EncryptedBlob blob)
@@ -285,10 +304,33 @@ namespace NeoSmart.SecureStore
             aes = new AesCryptoServiceProvider();
 #endif
 
+            //first validate the HMAC
+            var calculatedHmac = Authenticate(blob.IV, blob.Payload);
+
+            if (calculatedHmac.Length != blob.Hmac.Length)
+            {
+                throw new TamperedCipherTextException();
+            }
+
+            //compare without early abort
+            int mismatches = 0;
+            for (int i = 0; i < calculatedHmac.Length; ++i)
+            {
+                calculatedHmac[i] = (byte)(calculatedHmac[i] ^ blob.Hmac[i]);
+            }
+            for (int i = 0; i < calculatedHmac.Length; ++i)
+            {
+                mismatches += calculatedHmac[i];
+            }
+            if (mismatches != 0)
+            {
+                throw new TamperedCipherTextException();
+            }
+
             using (aes)
             {
                 aes.Mode = CipherMode.CBC;
-                aes.Key = _key.Buffer;
+                aes.Key = _encryptionKey.Buffer;
                 aes.BlockSize = 128;
                 aes.IV = blob.IV;
 
@@ -301,10 +343,15 @@ namespace NeoSmart.SecureStore
 
         public void Dispose()
         {
-            if (_key != null)
+            if (_hmacKey != null)
             {
-                _key.Dispose();
-                _key = null;
+                _hmacKey.Dispose();
+                _hmacKey = null;
+            }
+            if (_encryptionKey != null)
+            {
+                _encryptionKey.Dispose();
+                _encryptionKey = null;
             }
         }
     }
