@@ -25,10 +25,28 @@ namespace NeoSmart.SecureStore
         {
         }
 
-        public static SecretsManager NewStore()
+        public static SecretsManager CreateStore(string password)
         {
             var secretsManager = new SecretsManager();
             secretsManager.InitializeNewStore();
+            secretsManager.LoadKeyFromPassword(password);
+            return secretsManager;
+        }
+
+        public static SecretsManager CreateStore(NewStoreMode mode, string path)
+        {
+            var secretsManager = new SecretsManager();
+            secretsManager.InitializeNewStore();
+            if (mode == NewStoreMode.CreateNewKeyFile)
+            {
+                secretsManager.GenerateKey();
+                secretsManager.ExportKeyFile(path);
+            }
+            else
+            {
+                secretsManager.LoadKeyFromFile(path);
+            }
+
             return secretsManager;
         }
 
@@ -37,6 +55,21 @@ namespace NeoSmart.SecureStore
             var secretsManager = new SecretsManager();
             secretsManager.LoadSecretsFromFile(path);
             return secretsManager;
+        }
+
+        private static void GenerateBytes(byte[] buffer)
+        {
+#if NETSTANDARD1_3
+            var rng = RandomNumberGenerator.Create();
+#else
+            var rng = new RNGCryptoServiceProvider();
+#endif
+
+            rng.GetBytes(buffer);
+
+#if !NET20 && !NET30 && !NET35
+            rng.Dispose();
+#endif
         }
 
         static private byte[] DerivePassword(SecureString password, byte[] salt)
@@ -51,6 +84,18 @@ namespace NeoSmart.SecureStore
                 return pbkdf2.GetBytes(KEYLENGTH);
             }
 #endif
+        }
+
+        //Generate a new key for a new store
+        private void GenerateKey()
+        {
+            if (_key != null)
+            {
+                throw new KeyAlreadyLoadedException();
+            }
+
+            _key = new SecureBuffer(KEYLENGTH);
+            GenerateBytes(_key.Buffer);
         }
 
         //Load an encryption key from a file
@@ -84,7 +129,7 @@ namespace NeoSmart.SecureStore
             }
         }
 
-        public void SaveKeyFile(string path)
+        public void ExportKeyFile(string path)
         {
             //We don't know how .NET buffers things in memory, so we write it ourselves for maximum security
             //avoid excess buffering where possible, even if slow
@@ -136,17 +181,7 @@ namespace NeoSmart.SecureStore
             _vault.Data = new SortedDictionary<string, EncryptedBlob>();
 
             //Generate a new IV for password-based key derivation
-#if NETSTANDARD1_3
-            var rng = RandomNumberGenerator.Create();
-#else
-            var rng = new RNGCryptoServiceProvider();
-#endif
-
-            rng.GetBytes(_vault.IV);
-
-#if !NET20 && !NET30 && !NET35
-            rng.Dispose();
-#endif
+            GenerateBytes(_vault.IV);
         }
 
         private void LoadSecretsFromFile(string path)
@@ -213,11 +248,11 @@ namespace NeoSmart.SecureStore
             SymmetricAlgorithm aes;
 
 #if NETSTANDARD1_3
-        aes = Aes.Create();
+            aes = Aes.Create();
 #elif NET20 || NET30
-        aes = Rijndael.Create();
+            aes = Rijndael.Create();
 #else
-        aes = new AesCryptoServiceProvider();
+            aes = new AesCryptoServiceProvider();
 #endif
 
             using (aes)
