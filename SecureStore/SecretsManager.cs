@@ -20,15 +20,15 @@ namespace NeoSmart.SecureStore
         private const int PBKDF2ROUNDS = 10000;
         private const int IVSIZE = 8;
 
+        private Vault _vault;
         private SecureBuffer _encryptionKey;
         private SecureBuffer _hmacKey;
-        private Vault _vault;
 
         private SecretsManager()
         {
         }
 
-        public static SecretsManager NewStore()
+        public static SecretsManager CreateStore()
         {
             var secretsManager = new SecretsManager();
             secretsManager.InitializeNewStore();
@@ -40,6 +40,35 @@ namespace NeoSmart.SecureStore
             var secretsManager = new SecretsManager();
             secretsManager.LoadSecretsFromFile(path);
             return secretsManager;
+        }
+
+        private static void GenerateBytes(byte[] buffer)
+        {
+#if NETSTANDARD1_3
+            var rng = RandomNumberGenerator.Create();
+#else
+            var rng = new RNGCryptoServiceProvider();
+#endif
+
+            rng.GetBytes(buffer);
+
+#if !NET20 && !NET30 && !NET35
+            rng.Dispose();
+#endif
+        }
+
+        //Generate a new key for a new store
+        public void GenerateKey()
+        {
+            if (_encryptionKey != null)
+            {
+                throw new KeyAlreadyLoadedException();
+            }
+
+            _encryptionKey = new SecureBuffer(KEYLENGTH);
+            GenerateBytes(_encryptionKey.Buffer);
+            _hmacKey = new SecureBuffer(KEYLENGTH);
+            GenerateBytes(_hmacKey.Buffer);
         }
 
         //Load an encryption key from a file
@@ -62,21 +91,18 @@ namespace NeoSmart.SecureStore
                 _encryptionKey = new SecureBuffer(KEYLENGTH);
                 _hmacKey = new SecureBuffer(KEYLENGTH);
 
-                int bytesRead = file.Read(_encryptionKey.Buffer, 0, KEYLENGTH);
-                if (bytesRead != KEYLENGTH)
+                foreach (var buffer in new [] { _encryptionKey.Buffer, _hmacKey.Buffer })
                 {
-                    throw new IOException("Unable to read from key file!");
-                }
-
-                bytesRead = file.Read(_hmacKey.Buffer, 0, KEYLENGTH);
-                if (bytesRead != KEYLENGTH)
-                {
-                    throw new IOException("Unable to read from key file!");
+                    int bytesRead = file.Read(buffer, 0, KEYLENGTH);
+                    if (bytesRead != KEYLENGTH)
+                    {
+                        throw new IOException("Unable to read from key file!");
+                    }
                 }
             }
         }
 
-        public void SaveKeyFile(string path)
+        public void ExportKey(string path)
         {
             //We don't know how .NET buffers things in memory, so we write it ourselves for maximum security
             //avoid excess buffering where possible, even if slow
@@ -87,14 +113,14 @@ namespace NeoSmart.SecureStore
             }
         }
 
-        static private byte[] DerivePassword(SecureString password, byte[] salt)
+        static private byte[] DerivePassword(string password, byte[] salt)
         {
 #if NETSTANDARD1_3
-            return KeyDerivation.Pbkdf2(password.ToString(), salt, KeyDerivationPrf.HMACSHA1, PBKDF2ROUNDS, KEYLENGTH * KEYCOUNT);
+            return KeyDerivation.Pbkdf2(password, salt, KeyDerivationPrf.HMACSHA1, PBKDF2ROUNDS, KEYLENGTH * KEYCOUNT);
 #elif NET20 || NET30 || NET35
-            return new Rfc2898DeriveBytes(password.ToString(), salt, PBKDF2ROUNDS).GetBytes(KEYLENGTH * KEYCOUNT);
+            return new Rfc2898DeriveBytes(password, salt, PBKDF2ROUNDS).GetBytes(KEYLENGTH * KEYCOUNT);
 #else
-            using (var pbkdf2 = new Rfc2898DeriveBytes(password.ToString(), salt, PBKDF2ROUNDS))
+            using (var pbkdf2 = new Rfc2898DeriveBytes(password, salt, PBKDF2ROUNDS))
             {
                 return pbkdf2.GetBytes(KEYLENGTH * KEYCOUNT);
             }
@@ -118,7 +144,7 @@ namespace NeoSmart.SecureStore
         }
 
         //Derive an encryption key from a password
-        public void LoadKeyFromPassword(SecureString password)
+        public void LoadKeyFromPassword(string password)
         {
             if (_encryptionKey != null)
             {
@@ -126,20 +152,8 @@ namespace NeoSmart.SecureStore
             }
 
             var insecure = DerivePassword(password, _vault.IV);
-            SplitKey(insecure);
-        }
-
-        public void LoadKeyFromPassword(string password)
-        {
-            if (_vault == null)
+            using (var sb = new SecureBuffer(insecure))
             {
-                throw new NoStoreLoadedException();
-            }
-
-            using (var ss = new SecureString())
-            {
-                ss.FromInsecure(password);
-                var insecure = DerivePassword(ss, _vault.IV);
                 SplitKey(insecure);
             }
         }
@@ -151,17 +165,7 @@ namespace NeoSmart.SecureStore
             _vault.Data = new SortedDictionary<string, EncryptedBlob>();
 
             //Generate a new IV for password-based key derivation
-#if NETSTANDARD1_3
-            var rng = RandomNumberGenerator.Create();
-#else
-            var rng = new RNGCryptoServiceProvider();
-#endif
-
-            rng.GetBytes(_vault.IV);
-
-#if !NET20 && !NET30 && !NET35
-            rng.Dispose();
-#endif
+            GenerateBytes(_vault.IV);
         }
 
         private void LoadSecretsFromFile(string path)

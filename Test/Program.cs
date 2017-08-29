@@ -16,7 +16,7 @@ namespace NeoSmart.SecureStore.Test
                 {"guid", Guid.NewGuid()}
             };
 
-            using (var secure = SecretsManager.NewStore())
+            using (var secure = SecretsManager.CreateStore())
             {
                 secure.LoadKeyFromPassword("test123");
 
@@ -27,7 +27,7 @@ namespace NeoSmart.SecureStore.Test
                 }
 
                 //Test exporting the key (also so we can test key <---> password compatibility later)
-                secure.SaveKeyFile("keyfile.bin");
+                secure.ExportKey("keyfile.bin");
 
                 //Test saving
                 secure.SaveSecretsToFile("encrypted.bin");
