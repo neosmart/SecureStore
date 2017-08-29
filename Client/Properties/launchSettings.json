@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Client": {
+      "commandName": "Project",
+      "commandLineArgs": "update -s test.bin -p 123 -k foo -v bar"
+    }
+  }
+}
