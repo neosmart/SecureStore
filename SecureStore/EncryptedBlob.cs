@@ -9,6 +9,7 @@ namespace NeoSmart.SecureStore
     internal struct EncryptedBlob
     {
         public byte[] IV;
+        public byte[] Hmac;
         public byte[] Payload;
     }
 }

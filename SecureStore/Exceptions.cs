@@ -52,4 +52,15 @@ namespace NeoSmart.SecureStore
         {
         }
     }
+
+    public class TamperedCipherTextException : SecretsException
+    {
+        public TamperedCipherTextException(string message) : base(message)
+        {
+        }
+
+        public TamperedCipherTextException() : this("The ciphertext in this secure store has been tampered with and is no longer valid!")
+        {
+        }
+    }
 }

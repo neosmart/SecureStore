@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Text;
 
 namespace NeoSmart.SecureStore.Test
 {
@@ -34,7 +36,6 @@ namespace NeoSmart.SecureStore.Test
             //Test loading encrypted data from disk
             using (var test1 = SecretsManager.LoadStore("encrypted.bin"))
             {
-
                 //Test decrypting with previously-exported key file
                 test1.LoadKeyFromFile("keyfile.bin");
 
@@ -61,6 +62,14 @@ namespace NeoSmart.SecureStore.Test
                 {
                     throw new Exception("Problem retrieving previously-saved int with key from password!");
                 }
+            }
+
+            //Test decryption after modifications to ciphertext
+            using (var test3 = SecretsManager.LoadStore("encrypted.bin"))
+            {
+                test3.LoadKeyFromPassword("teaouaoeust1233");
+                Console.WriteLine("int: " + test3.Retrieve<int>("int"));
+                Console.WriteLine("string: " + test3.Retrieve<string>("string"));
             }
 
             Console.WriteLine("Test passed!");
