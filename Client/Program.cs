@@ -161,7 +161,7 @@ namespace NeoSmart.SecureStore.Client
             try
             {
                 //we have no trailing parameters, but Mono.Options is dumb and does not treat --password PASSWORD 
-                //as a option:value tuple when password is defined as taking an optional value.
+                //as an option:value tuple when password is defined as taking an optional value.
                 //It instead requires --password=PASSWORD or --password:PASSWORD or -pPASSWORD
                 var bareArguments = options.Parse(args.Skip(1));
 
@@ -258,21 +258,21 @@ namespace NeoSmart.SecureStore.Client
                         sman.LoadKeyFromPassword(password);
                     }
 
+                    var client = new Client(sman);
+
                     switch (command)
                     {
                         case "create":
+                            client.Create();
                             break;
                         case "update":
                             if (delete)
                             {
-                                if (!sman.Delete(key))
-                                {
-                                    throw new ExitCodeException(1, $"Key \"{key}\" not found in secrets store!");
-                                }
+                                client.Delete(key);
                             }
                             else
                             {
-                                sman.Set(key, value);
+                                client.Update(key, value);
                             }
                             break;
                         case "decrypt":
@@ -282,38 +282,12 @@ namespace NeoSmart.SecureStore.Client
                                 {
                                     Help($"--format can only be used in conjunction with --all!", command, options);
                                 }
-                                if (!sman.TryRetrieve(key, out string retrieved))
-                                {
-                                    throw new ExitCodeException(1, $"Key \"{key}\" not found in secrets store!");
-                                }
-                                else
-                                {
-                                    Console.WriteLine(retrieved);
-                                }
+
+                                client.Decrypt(key);
                             }
                             else
                             {
-                                //this is going to stdout out, don't bother securing the memory here
-                                var decrypted = new Dictionary<string, dynamic>();
-                                foreach (var k in sman.Keys)
-                                {
-                                    var v = sman.Retrieve<dynamic>(k);
-                                    decrypted[k] = v;
-                                }
-
-                                switch (format)
-                                {
-                                    case DecryptFormat.PlainText:
-                                        foreach (var k in decrypted.Keys)
-                                        {
-                                            Console.WriteLine($"{k}: { decrypted[k].ToString() }");
-                                        }
-                                        break;
-                                    default:
-                                        var serializerOptions = JsonConvert.SerializeObject(decrypted, Formatting.Indented);
-                                        Console.WriteLine(serializerOptions);
-                                        break;
-                                }
+                                client.DecryptAll(format);
                             }
                             break;
                         default:
