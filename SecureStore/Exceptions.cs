@@ -52,4 +52,15 @@ namespace NeoSmart.SecureStore
         {
         }
     }
+
+    public class UnsupportedVaultVersionException : SecretsException
+    {
+        public UnsupportedVaultVersionException(string message) : base(message)
+        {
+        }
+
+        public UnsupportedVaultVersionException() : this("An attempt was made to load a secrets file that cannot be read with this version of SecureStore!")
+        {
+        }
+    }
 }

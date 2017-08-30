@@ -38,7 +38,7 @@ namespace NeoSmart.SecureStore
         public static SecretsManager LoadStore(string path)
         {
             var secretsManager = new SecretsManager();
-            secretsManager.LoadSecretsFromFile(path);
+            secretsManager.LoadSecretsFile(path);
             return secretsManager;
         }
 
@@ -162,19 +162,24 @@ namespace NeoSmart.SecureStore
         {
             _vault = new Vault();
             _vault.IV = new byte[IVSIZE];
+            _vault.VaultVersion = Vault.SCHEMAVERSION;
             _vault.Data = new SortedDictionary<string, EncryptedBlob>();
 
             //Generate a new IV for password-based key derivation
             GenerateBytes(_vault.IV);
         }
 
-        private void LoadSecretsFromFile(string path)
+        private void LoadSecretsFile(string path)
         {
             using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read))
             using (var reader = new StreamReader(stream, Encoding.UTF8))
             using (var jreader = new JsonTextReader(reader))
             {
                 _vault = JsonSerializer.Create().Deserialize<Vault>(jreader);
+                if (_vault.VaultVersion > Vault.SCHEMAVERSION)
+                {
+                    throw new UnsupportedVaultVersionException();
+                }
             }
         }
 
@@ -316,11 +321,7 @@ namespace NeoSmart.SecureStore
             int mismatches = 0;
             for (int i = 0; i < calculatedHmac.Length; ++i)
             {
-                calculatedHmac[i] = (byte)(calculatedHmac[i] ^ blob.Hmac[i]);
-            }
-            for (int i = 0; i < calculatedHmac.Length; ++i)
-            {
-                mismatches += calculatedHmac[i];
+                mismatches += (byte)(calculatedHmac[i] ^ blob.Hmac[i]);
             }
             if (mismatches != 0)
             {
