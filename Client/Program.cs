@@ -116,10 +116,15 @@ namespace NeoSmart.SecureStore.Client
             //only try to parse --help and --version
             globalOptions.Parse(new[] { args[0] });
 
-            if (help)
+            void printVersion()
             {
                 Console.WriteLine($"ssclient {AssemblyVersion} - SecureStore secrets manager client");
                 Console.WriteLine("Copyright NeoSmart Technologies 2017 - https://github.com/neosmart/SecureStore/");
+            }
+
+            if (help)
+            {
+                printVersion();
                 Console.WriteLine();
                 Console.Write("Usage: ");
                 printUsage();
@@ -129,9 +134,7 @@ namespace NeoSmart.SecureStore.Client
 
             if (version)
             {
-                Console.WriteLine($"ssclient {AssemblyVersion} - SecureStore secrets manager client");
-                Console.WriteLine("Copyright NeoSmart Technologies 2017 - https://github.com/neosmart/SecureStore/");
-
+                printVersion();
                 Environment.Exit(0);
             }
 
