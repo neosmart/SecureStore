@@ -56,3 +56,7 @@ Thumbs.db
 packages/
 .nuget
 .vs
+####################
+# Local test files #
+####################
+test.bin
