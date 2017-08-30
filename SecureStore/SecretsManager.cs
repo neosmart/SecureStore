@@ -233,6 +233,8 @@ namespace NeoSmart.SecureStore
             }
         }
 
+        public IEnumerable<string> Keys => _vault.Data.Keys;
+
         private EncryptedBlob Encrypt(SecureBuffer input)
         {
             EncryptedBlob blob;

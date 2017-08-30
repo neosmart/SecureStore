@@ -7,6 +7,7 @@ using System.Security;
 using System.Diagnostics;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using Newtonsoft.Json;
 
 namespace NeoSmart.SecureStore.Client
 {
@@ -28,6 +29,22 @@ namespace NeoSmart.SecureStore.Client
             }
         }
 
+        private static bool Parse(string value, out DecryptFormat format)
+        {
+            switch (value)
+            {
+                case "json":
+                    format = DecryptFormat.Json;
+                    return true;
+                case "text":
+                    format = DecryptFormat.PlainText;
+                    return true;
+                default:
+                    format = DecryptFormat.None;
+                    return false;
+            }
+        }
+
         static void Main(string[] args)
         {
             var argv = args;
@@ -39,6 +56,8 @@ namespace NeoSmart.SecureStore.Client
             bool delete = false;
             string key = null;
             string value = null;
+            bool decryptAll = false;
+            DecryptFormat format = DecryptFormat.None;
 
             OptionSet globalOptions;
 
@@ -51,7 +70,7 @@ namespace NeoSmart.SecureStore.Client
 
             var updateOptions = new OptionSet
             {
-                { "s|store=", "Path to the secrets store to be created", s => path = s },
+                { "s|store=", "Path to the secrets store to be loaded", s => path = s },
                 { "p|password:", "Decrypt the store with a key derived from a password (optionally provided in the command line)", p => password = p ?? "" },
                 { "f|keyfile=", "Decrypt the store with a keyfile, located at the provided path", f => keyfile = f },
                 { "k|key=", "The (new or existing) key of the (key, value) tuple to create or update", k => key = k },
@@ -59,13 +78,24 @@ namespace NeoSmart.SecureStore.Client
                 { "d|delete=", "The existing key of the (key, value) tuple to delete", k => {key = k; delete = true; } },
             };
 
+            var decryptOptions = new OptionSet
+            {
+                { "s|store=", "Path to the secrets store to be loaded", s => path = s },
+                { "p|password:", "Decrypt the store with a key derived from a password (optionally provided in the command line)", p => password = p ?? "" },
+                { "f|keyfile=", "Decrypt the store with a keyfile, located at the provided path", f => keyfile = f },
+                { "k|key=", "The (new or existing) key of the (key, value) tuple to create or update", k => key = k },
+                { "a|all", "Decrypt the entire contents of the store and print to stdout", a => decryptAll = a != null },
+                { "t|format=", "Specify the output format: json (default), text", t => { if (!Parse(t, out format)) throw new ExitCodeException(1, "Unsupported format specified!"); } }
+            };
+
             void printUsage()
             {
-                Console.WriteLine($"ssclient [OPTIONS | [create|update] OPTIONS]");
+                Console.WriteLine($"ssclient [OPTIONS | [create|update|decrypt] OPTIONS]");
                 PrintOptions(null, globalOptions);
                 Console.WriteLine();
                 PrintOptions("create", createOptions);
                 PrintOptions("update", updateOptions);
+                PrintOptions("decrypt", decryptOptions);
             }
 
             bool help = false;
@@ -116,6 +146,9 @@ namespace NeoSmart.SecureStore.Client
                 case "update":
                     options = updateOptions;
                     break;
+                case "decrypt":
+                    options = decryptOptions;
+                    break;
                 default:
                     Console.WriteLine($"{command}: unsupported command!");
                     Console.WriteLine();
@@ -127,8 +160,9 @@ namespace NeoSmart.SecureStore.Client
             int exitCode = 0;
             try
             {
-                //we have no trailing parameters, but Mono.Options is dumb and does not treat --password PASSWORD as a option:value tuple when password is defined as taking an optional value
-                //it instead requires --password=PASSWORD or --password:PASSWORD or -pPASSWORD
+                //we have no trailing parameters, but Mono.Options is dumb and does not treat --password PASSWORD 
+                //as a option:value tuple when password is defined as taking an optional value.
+                //It instead requires --password=PASSWORD or --password:PASSWORD or -pPASSWORD
                 var bareArguments = options.Parse(args.Skip(1));
 
                 bool standalonePassword = false;
@@ -155,12 +189,10 @@ namespace NeoSmart.SecureStore.Client
                     }
                 }
 
+                //Handle common parameters
                 if (!standalonePassword && bareArguments.Count > 0)
                 {
-                    Console.WriteLine("Invalid arguments!");
-                    Console.WriteLine();
-                    printUsage();
-                    throw new ExitCodeException(1);
+                    Help("Invalid arguments!", command, options);
                 }
 
                 if (string.IsNullOrWhiteSpace(path))
@@ -186,19 +218,30 @@ namespace NeoSmart.SecureStore.Client
 
                 SecretsManager sman = null;
 
+                //Handle parameters specific to certain commands
                 if (command == "create")
                 {
                     sman = SecretsManager.CreateStore();
                 }
-                else if (command == "update")
+                else
                 {
-                    if (delete && (key != null || value != null))
+                    if (command == "update")
                     {
-                        Help("Cannot specify both --delete and --key or --value!", command, options);
+                        if (delete && (key != null || value != null))
+                        {
+                            Help("Cannot specify both --delete and --key or --value!", command, options);
+                        }
+                        else if (!delete && (key == null || value == null))
+                        {
+                            Help("Must specify both --key and --value to update!", command, options);
+                        }
                     }
-                    else if (!delete && (key == null || value == null))
+                    else if (command == "decrypt")
                     {
-                        Help("Must specify both --key and --value to update!", command, options);
+                        if (!decryptAll && string.IsNullOrWhiteSpace(key))
+                        {
+                            Help("Either --all or --key KEY must be specified as an argument to decrypt!", command, options);
+                        }
                     }
 
                     sman = SecretsManager.LoadStore(path);
@@ -224,7 +267,7 @@ namespace NeoSmart.SecureStore.Client
                             {
                                 if (!sman.Delete(key))
                                 {
-                                    Console.WriteLine($"Key \"{key}\" not found in secrets store!");
+                                    throw new ExitCodeException(1, $"Key \"{key}\" not found in secrets store!");
                                 }
                             }
                             else
@@ -232,6 +275,49 @@ namespace NeoSmart.SecureStore.Client
                                 sman.Set(key, value);
                             }
                             break;
+                        case "decrypt":
+                            if (!decryptAll)
+                            {
+                                if (format != DecryptFormat.None)
+                                {
+                                    Help($"--format can only be used in conjunction with --all!", command, options);
+                                }
+                                if (!sman.TryRetrieve(key, out string retrieved))
+                                {
+                                    throw new ExitCodeException(1, $"Key \"{key}\" not found in secrets store!");
+                                }
+                                else
+                                {
+                                    Console.WriteLine(retrieved);
+                                }
+                            }
+                            else
+                            {
+                                //this is going to stdout out, don't bother securing the memory here
+                                var decrypted = new Dictionary<string, dynamic>();
+                                foreach (var k in sman.Keys)
+                                {
+                                    var v = sman.Retrieve<dynamic>(k);
+                                    decrypted[k] = v;
+                                }
+
+                                switch (format)
+                                {
+                                    case DecryptFormat.PlainText:
+                                        foreach (var k in decrypted.Keys)
+                                        {
+                                            Console.WriteLine($"{k}: { decrypted[k].ToString() }");
+                                        }
+                                        break;
+                                    default:
+                                        var serializerOptions = JsonConvert.SerializeObject(decrypted, Formatting.Indented);
+                                        Console.WriteLine(serializerOptions);
+                                        break;
+                                }
+                            }
+                            break;
+                        default:
+                            throw new NotImplementedException($"Case {command} not handled!");
                     }
 
                     sman.SaveSecretsToFile(path);
@@ -244,6 +330,10 @@ namespace NeoSmart.SecureStore.Client
             }
             catch (ExitCodeException ex)
             {
+                if (!string.IsNullOrWhiteSpace(ex.Message))
+                {
+                    Console.WriteLine(ex.Message);
+                }
                 exitCode = ex.ExitCode;
             }
             catch (Exception ex)
