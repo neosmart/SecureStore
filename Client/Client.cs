@@ -21,7 +21,19 @@ namespace NeoSmart.SecureStore.Client
 
         public void Update(string key, string value)
         {
-            _sman.Set(key, value);
+            //manually attempt to handle a few particular types
+            if (!value.StartsWith("0") && int.TryParse(value, out var intValue))
+            {
+                _sman.Set(key, intValue);
+            }
+            else if (bool.TryParse(value, out var boolValue))
+            {
+                _sman.Set(key, boolValue);
+            }
+            else
+            {
+                _sman.Set(key, value);
+            }
         }
 
         public void Delete(string key)
