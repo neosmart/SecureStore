@@ -239,14 +239,12 @@ namespace NeoSmart.SecureStore
         {
             EncryptedBlob blob;
 
-            SymmetricAlgorithm aes;
-
 #if NETSTANDARD1_3
-            aes = Aes.Create();
+            var aes = Aes.Create();
 #elif NET20 || NET30
-            aes = Rijndael.Create();
+            var aes = Rijndael.Create();
 #else
-            aes = new AesCryptoServiceProvider();
+            var aes = new AesCryptoServiceProvider();
 #endif
 
             using (aes)
