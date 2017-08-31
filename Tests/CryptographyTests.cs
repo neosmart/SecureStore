@@ -112,5 +112,35 @@ namespace Tests
                 Assert.AreNotEqual("bar", retrieved, "Retrieved encrypted data with wrong password!");
             }
         }
+
+        /// <summary>
+        /// Verify that the RNG creates unique keys.
+        /// </summary>
+        [TestMethod]
+        public void KeyDuplicationTest()
+        {
+            string path1 = Path.GetTempFileName();
+            string path2 = Path.GetTempFileName();
+
+            using (var sman = SecretsManager.CreateStore())
+            {
+                sman.GenerateKey();
+                sman.ExportKey(path1);
+            }
+
+            using (var sman = SecretsManager.CreateStore())
+            {
+                sman.GenerateKey();
+                sman.ExportKey(path2);
+            }
+
+            //verify that keys are not the same
+            var key1 = File.ReadAllBytes(path1);
+            var key2 = File.ReadAllBytes(path2);
+
+            Assert.IsTrue(key1.Length == key2.Length, "Generated key lengths differ!");
+            Assert.IsTrue(key1.Length != 0, "A zero-length keyfile was created!");
+            Assert.IsFalse(key1.SequenceEqual(key2));
+        }
     }
 }
