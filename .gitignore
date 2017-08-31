@@ -59,4 +59,5 @@ packages/
 ####################
 # Local test files #
 ####################
-test.bin
+secrets.bin
+secrets.key
