@@ -235,6 +235,7 @@ namespace NeoSmart.SecureStore
             using (var writer = new StreamWriter(stream, utf8NoBom))
             using (var jwriter = new JsonTextWriter(writer))
             {
+                jwriter.Formatting = Formatting.Indented;
                 JsonSerializer.Create().Serialize(jwriter, _vault);
             }
         }
