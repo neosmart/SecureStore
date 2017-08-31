@@ -1,8 +1,8 @@
-#SecureStore: the .NET Secrets Manager
+# SecureStore: the .NET Secrets Manager
 
 SecureStore is a symmetrically-encrypted secrets manager for .NET, that embraces the KISS mentality, focuses on security and ease-of-use, and eschews overly-complicated solutions where possible.
 
-##SecureStore Architecture
+## SecureStore Architecture
 
 While "how to use" might be a more typical first section of the README for libraries, as a security-oriented library, we feel that "how it works" better deserves the initial focus.
 
@@ -16,13 +16,13 @@ Everything is self-contained in the SecureStore .NET library, available as a NuG
 
 You can read more about the architectural decisions that drive SecureStore in the [original release notes](https://neosmart.net/blog/2017/securestore-a-net-secrets-manager/) for the first, public version of SecureStore.
 
-##Obtaining SecureStore
+## Obtaining SecureStore
 
 SecureStore is currently available for all versions of the .NET Framework and .NET Core and can be obtained by either locally cloning this git repository or via NuGet:
 
     Install-Package SecureStore
 
-##Using SecureStore
+## Using SecureStore
 
 As previously mentioned, SecureStore puts a premium on ease-of-use, and you can be up and going in minutes once you've added SecureStore to your .NET or ASP.NET project.
 
@@ -30,11 +30,11 @@ Everything starts and ends with a `SecretsManager` object, available in the `Neo
 
 **Important note:** `SecretsManager` implements `IDisposable` and _must_ only be instantiated in a `using` block! There is important cleanup of crypto resources in the `Dispose()` method!
 
-###Creating Secrets
+### Creating Secrets
 
 Your secrets can be created via the .NET `SecretsManager` API or via the standalone `ssclient` CLI (short for SecureStore Client).
 
-####Creating secrets with the .NET API
+#### Creating secrets with the .NET API
 
 As mentioned above, the encryption/decryption key used by SecureStore can be created by `SecretsManager`, securely derived from a password of your choice, or loaded from an existing key file provided by yourself. All options are shown below:
 
@@ -70,7 +70,7 @@ Similarly, secrets may be appended to a previously-created store by calling `Sec
 
 As you can see, apart from the generic `Retrive<T>(key)` method, an exception-safe `SecretsManager.TryRetrieve<T>(key, out T value)` method is also available.
 
-####Creating secrets with `ssclient` CLI
+#### Creating secrets with `ssclient` CLI
 
 The SecureStore command line interface `ssclient` may also be used to create a secure store. A password may be supplied as a command line argument (if `-p` or `--password` is followed by a value), entered via `stdin` (if `-p` is not provided a value), or from a key file (via a value provided to the `-f` or `--keyfile` parameter). To create a new key file, specify both `--keyfile` and `--generate` and a new key will be saved to the provided key file path.
 
@@ -81,11 +81,11 @@ ssclient update -s secrets.bin -k foo -v bar
 
 See the full `ssclient` documentation for further details.
 
-###Retrieving Secrets
+### Retrieving Secrets
 
 Retrieving secrets may also be done via both the .NET API and the `ssclient` CLI. Options exist to iterate over all secrets in a secrets file and to query for the existence of a key in an exception-safe manner.
 
-####Retrieving secrets via the .NET API
+#### Retrieving secrets via the .NET API
 
 The API to retrieve secrets does not differ greatly from that used to create them. Usage is straight-forward:
 
@@ -119,7 +119,7 @@ using (var sman = SecretsManager.LoadStore("secrets.bin"))
 Needless to say, this should be used with extreme caution.
 
 
-####Retrieving secrets via the `ssclient` CLI
+#### Retrieving secrets via the `ssclient` CLI
 
 The `ssclient` utility also provides similar functionality and can be used to both retrieve a single value or to export a decrypted copy of the store.
 
@@ -135,6 +135,6 @@ and
 
     ssclient decrypt --all --format text -s secrets.bin -p
 
-##License and Copyright
+## License and Copyright
 
 SecureStore for .NET is written and developed by Mahmoud Al-Qudsi of NeoSmart Technologies. SecureStore is released to the general public under the terms of the open source MIT license, and all rights not assigned are reserved to NeoSmart Technologies. The name SecureStore is copyright NeoSmart Technologies 2015 - 2016.
