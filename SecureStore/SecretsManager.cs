@@ -230,8 +230,9 @@ namespace NeoSmart.SecureStore
 
         public void SaveStore(string path)
         {
+            var utf8NoBom = new UTF8Encoding(false);
             using (var stream = new FileStream(path, FileMode.Create, FileAccess.ReadWrite))
-            using (var writer = new StreamWriter(stream, Encoding.UTF8))
+            using (var writer = new StreamWriter(stream, utf8NoBom))
             using (var jwriter = new JsonTextWriter(writer))
             {
                 JsonSerializer.Create().Serialize(jwriter, _vault);
