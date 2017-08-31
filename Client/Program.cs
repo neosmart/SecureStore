@@ -57,6 +57,7 @@ namespace NeoSmart.SecureStore.Client
             string key = null;
             string value = null;
             bool decryptAll = false;
+            bool generate = false;
             DecryptFormat format = DecryptFormat.None;
 
             OptionSet globalOptions;
@@ -66,6 +67,7 @@ namespace NeoSmart.SecureStore.Client
                 { "s|store=", "Path to the secrets store to be created", s => path = s },
                 { "p|password:", "Secure the store with a key derived from a password (optionally provided in the command line)", p => password = p ?? "" },
                 { "f|keyfile=", "Secure the store with a randomly generated key, created at the provided path", f => keyfile = f },
+                { "g|generate", "Generate a new key and save it to the path specified by --keyfile", g => generate = g != null },
             };
 
             var updateOptions = new OptionSet
@@ -144,7 +146,7 @@ namespace NeoSmart.SecureStore.Client
             switch (command)
             {
                 case "create":
-                    options = updateOptions;
+                    options = createOptions;
                     break;
                 case "update":
                     options = updateOptions;
@@ -213,7 +215,7 @@ namespace NeoSmart.SecureStore.Client
                     Help("Must specify either --password or --keyfile!", command, options);
                 }
 
-                if (keyfile == null && string.IsNullOrWhiteSpace(password))
+                if (password == "")
                 {
                     Console.Write("Password: ");
                     password = GetPassword();
@@ -224,6 +226,10 @@ namespace NeoSmart.SecureStore.Client
                 //Handle parameters specific to certain commands
                 if (command == "create")
                 {
+                    if (generate && keyfile == null)
+                    {
+                        Help("--generate requires a path specified by --keyfile to export the newly created key to!", command, options);
+                    }
                     sman = SecretsManager.CreateStore();
                 }
                 else
@@ -252,7 +258,12 @@ namespace NeoSmart.SecureStore.Client
 
                 using (sman)
                 {
-                    if (keyfile != null)
+                    if (generate)
+                    {
+                        sman.GenerateKey();
+                        sman.ExportKey(keyfile);
+                    }
+                    else if (keyfile != null)
                     {
                         sman.LoadKeyFromFile(keyfile);
                     }
