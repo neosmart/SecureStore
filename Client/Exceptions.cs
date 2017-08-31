@@ -9,7 +9,7 @@ namespace NeoSmart.SecureStore.Client
     {
         internal int ExitCode;
 
-        public ExitCodeException(int exitCode, string msg = null)
+        public ExitCodeException(int exitCode, string msg = "")
             : base(msg)
         {
             ExitCode = exitCode;
