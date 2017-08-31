@@ -308,7 +308,7 @@ namespace NeoSmart.SecureStore.Client
                             throw new NotImplementedException($"Case {command} not handled!");
                     }
 
-                    sman.SaveSecretsToFile(path);
+                    sman.SaveStore(path);
                 }
             }
             catch (OptionException ex)

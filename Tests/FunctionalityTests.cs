@@ -25,7 +25,7 @@ namespace Tests
             using (var sman = SecretsManager.CreateStore())
             {
                 sman.GenerateKey();
-                sman.SaveSecretsToFile(storePath);
+                sman.SaveStore(storePath);
             }
 
             Assert.IsTrue(File.Exists(storePath));
@@ -60,7 +60,7 @@ namespace Tests
                 {
                     sman.Set(key, SecureData[key]);
                 }
-                sman.SaveSecretsToFile(storePath);
+                sman.SaveStore(storePath);
                 sman.ExportKey(keyPath);
             }
 

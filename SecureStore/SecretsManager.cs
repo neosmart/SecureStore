@@ -228,7 +228,7 @@ namespace NeoSmart.SecureStore
             return false;
         }
 
-        public void SaveSecretsToFile(string path)
+        public void SaveStore(string path)
         {
             using (var stream = new FileStream(path, FileMode.Create, FileAccess.ReadWrite))
             using (var writer = new StreamWriter(stream, Encoding.UTF8))

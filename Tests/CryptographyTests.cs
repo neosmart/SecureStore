@@ -54,7 +54,7 @@ namespace Tests
             {
                 sman.LoadKeyFromPassword(password);
                 sman.Set("foo", "bar");
-                sman.SaveSecretsToFile(storePath);
+                sman.SaveStore(storePath);
             }
 
             //load the store contents into memory
@@ -96,7 +96,7 @@ namespace Tests
             {
                 sman.LoadKeyFromPassword("password1");
                 sman.Set("foo", "bar");
-                sman.SaveSecretsToFile(storePath);
+                sman.SaveStore(storePath);
             }
 
             using (var sman = SecretsManager.LoadStore(storePath))
