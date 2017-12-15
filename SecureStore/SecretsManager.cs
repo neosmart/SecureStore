@@ -104,6 +104,11 @@ namespace NeoSmart.SecureStore
 
         public void ExportKey(string path)
         {
+            if (_encryptionKey?.Buffer == null || _hmacKey?.Buffer == null)
+            {
+                throw new NoKeyLoadedException();
+            }
+
             //We don't know how .NET buffers things in memory, so we write it ourselves for maximum security
             //avoid excess buffering where possible, even if slow
             using (var file = File.Create(path, 1, FileOptions.WriteThrough))
@@ -111,6 +116,18 @@ namespace NeoSmart.SecureStore
                 file.Write(_encryptionKey.Buffer, 0, KEYLENGTH);
                 file.Write(_hmacKey.Buffer, 0, KEYLENGTH);
             }
+        }
+
+        public void ExportKey(out SecureBuffer secure)
+        {
+            if (_encryptionKey?.Buffer == null || _hmacKey?.Buffer == null)
+            {
+                throw new NoKeyLoadedException();
+            }
+
+            secure = new SecureBuffer(KEYLENGTH * 2);
+            Array.Copy(_encryptionKey.Buffer, secure.Buffer, KEYLENGTH);
+            Array.Copy(_hmacKey.Buffer, 0, secure.Buffer, KEYLENGTH, KEYLENGTH);
         }
 
         static private byte[] DerivePassword(string password, byte[] salt)
@@ -161,6 +178,16 @@ namespace NeoSmart.SecureStore
             {
                 SplitKey(insecure);
             }
+        }
+
+        public void LoadKey(SecureBuffer key)
+        {
+            if (key == null)
+            {
+                throw new ArgumentNullException("key");
+            }
+
+            LoadKey(key.Buffer);
         }
 
         public void LoadKey(byte[] key)

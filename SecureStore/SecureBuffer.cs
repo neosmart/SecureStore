@@ -6,7 +6,7 @@ using System.Text;
 
 namespace NeoSmart.SecureStore
 {
-    class SecureBuffer : IDisposable
+    public class SecureBuffer : IDisposable
     {
         public readonly byte[] Buffer;
         private readonly GCHandle _gcHandle;
