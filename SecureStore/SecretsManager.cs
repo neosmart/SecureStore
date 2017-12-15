@@ -158,6 +158,28 @@ namespace NeoSmart.SecureStore
             }
         }
 
+        public void LoadKey(byte[] key)
+        {
+            if (_encryptionKey != null)
+            {
+                throw new KeyAlreadyLoadedException();
+            }
+            if (key == null)
+            {
+                throw new ArgumentNullException("key");
+            }
+            if (key.Length != KEYLENGTH * 2)
+            {
+                throw new ArgumentException("Key with incorrect length provided!");
+            }
+
+            _encryptionKey = new SecureBuffer(KEYLENGTH);
+            _hmacKey = new SecureBuffer(KEYLENGTH);
+
+            Array.Copy(key, 0, _encryptionKey.Buffer, 0, KEYLENGTH);
+            Array.Copy(key, KEYLENGTH, _hmacKey.Buffer, 0, KEYLENGTH);
+        }
+
         private void InitializeNewStore()
         {
             _vault = new Vault();
