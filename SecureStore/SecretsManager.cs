@@ -118,16 +118,18 @@ namespace NeoSmart.SecureStore
             }
         }
 
-        public void ExportKey(out SecureBuffer secure)
+        public SecureBuffer ExportKey()
         {
             if (_encryptionKey?.Buffer == null || _hmacKey?.Buffer == null)
             {
                 throw new NoKeyLoadedException();
             }
 
-            secure = new SecureBuffer(KEYLENGTH * 2);
+            var secure = new SecureBuffer(KEYLENGTH * 2);
             Array.Copy(_encryptionKey.Buffer, secure.Buffer, KEYLENGTH);
             Array.Copy(_hmacKey.Buffer, 0, secure.Buffer, KEYLENGTH, KEYLENGTH);
+
+            return secure;
         }
 
         static private byte[] DerivePassword(string password, byte[] salt)
