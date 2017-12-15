@@ -129,6 +129,11 @@ namespace NeoSmart.SecureStore
 
         private void SplitKey(byte[] insecure)
         {
+            if (insecure.Length != KEYLENGTH * 2)
+            {
+                throw new ArgumentException("Key with incorrect length provided!");
+            }
+
             //While the consensus is that AES and HMAC are "sufficiently different" that reusing
             //the same key for Encrypt-then-MAC is probably safe, it's not something provable
             //and therefore (esp. since we can without too much additional burden) we should use two
@@ -160,24 +165,16 @@ namespace NeoSmart.SecureStore
 
         public void LoadKey(byte[] key)
         {
-            if (_encryptionKey != null)
-            {
-                throw new KeyAlreadyLoadedException();
-            }
             if (key == null)
             {
                 throw new ArgumentNullException("key");
             }
-            if (key.Length != KEYLENGTH * 2)
+            if (_encryptionKey != null)
             {
-                throw new ArgumentException("Key with incorrect length provided!");
+                throw new KeyAlreadyLoadedException();
             }
 
-            _encryptionKey = new SecureBuffer(KEYLENGTH);
-            _hmacKey = new SecureBuffer(KEYLENGTH);
-
-            Array.Copy(key, 0, _encryptionKey.Buffer, 0, KEYLENGTH);
-            Array.Copy(key, KEYLENGTH, _hmacKey.Buffer, 0, KEYLENGTH);
+            SplitKey(key);
         }
 
         private void InitializeNewStore()
