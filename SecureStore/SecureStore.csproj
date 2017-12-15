@@ -6,7 +6,7 @@
     <RootNamespace>NeoSmart.SecureStore</RootNamespace>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageId>SecureStore</PackageId>
-    <Version>0.3.1</Version>
+    <Version>0.3.2</Version>
     <Authors>NeoSmart Technologies, Mahmoud Al-Qudsi</Authors>
     <Company>NeoSmart Technologies</Company>
     <Description>A simple but secure secrets manager library for .NET and .NET Core, with on-disk encrypted storage. Securely store passwords and private keys in a git-friendly, human-readable format, optimized for local development and secure remote deployment.</Description>
@@ -16,14 +16,16 @@
     <RepositoryUrl>https://github.com/neosmart/SecureStore</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>secrets, encryption, secure, secrets manager, password,</PackageTags>
-    <PackageReleaseNotes>* Added LoadKey() function to load a key from a buffer in 0.3.1
+    <PackageReleaseNotes>* Added option to export key as SecureBuffer in 0.3.2
+* Added LoadKey() function to load a key from a buffer in 0.3.1
 * Revamped API and more security in 0.3</PackageReleaseNotes>
-    <AssemblyVersion>0.3.0.0</AssemblyVersion>
-    <FileVersion>0.3.0.0</FileVersion>
+    <AssemblyVersion>0.3.2.0</AssemblyVersion>
+    <FileVersion>0.3.2.0</FileVersion>
   </PropertyGroup>
 
   <PropertyGroup>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <PackageIconUrl>https://cdn.rawgit.com/neosmart/SecureStore/master/SecureStore.png</PackageIconUrl>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net20'">
