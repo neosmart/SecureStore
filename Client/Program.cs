@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
@@ -165,7 +165,7 @@ namespace NeoSmart.SecureStore.Client
             int exitCode = 0;
             try
             {
-                //we have no trailing parameters, but Mono.Options is dumb and does not treat --password PASSWORD 
+                //we have no trailing parameters, but Mono.Options is dumb and does not treat --password PASSWORD
                 //as an option:value tuple when password is defined as taking an optional value.
                 //It instead requires --password=PASSWORD or --password:PASSWORD or -pPASSWORD
                 var bareArguments = options.Parse(args.Skip(1));
@@ -236,7 +236,7 @@ namespace NeoSmart.SecureStore.Client
                 {
                     if (command == "update")
                     {
-                        if (delete && (key != null || value != null))
+                        if (delete && (key != null && value != null))
                         {
                             Help("Cannot specify both --delete and --key or --value!", command, options);
                         }
