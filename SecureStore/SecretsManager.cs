@@ -42,6 +42,13 @@ namespace NeoSmart.SecureStore
             return secretsManager;
         }
 
+        public static SecretsManager LoadStore(Stream stream)
+        {
+            var secretsManager = new SecretsManager();
+            secretsManager.LoadSecretsStream(stream);
+            return secretsManager;
+        }
+
         private static void GenerateBytes(byte[] buffer)
         {
 #if NETSTANDARD1_3
@@ -220,6 +227,11 @@ namespace NeoSmart.SecureStore
         private void LoadSecretsFile(string path)
         {
             using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read))
+                LoadSecretsStream(stream);
+        }
+
+        private void LoadSecretsStream(Stream stream)
+        {
             using (var reader = new StreamReader(stream, Encoding.UTF8))
             using (var jreader = new JsonTextReader(reader))
             {
@@ -230,6 +242,8 @@ namespace NeoSmart.SecureStore
                 }
             }
         }
+
+
 
         public string Retrieve(string name)
         {
