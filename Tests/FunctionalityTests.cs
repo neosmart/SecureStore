@@ -47,22 +47,27 @@ namespace Tests
             Assert.AreNotEqual(0, new FileInfo(keyPath).Length, "Exported key is zero bytes!");
         }
 
-        [TestMethod]
-        public void StoreAndLoad()
+        private void CreateTestStore(string storePath, string keyPath)
         {
-            var storePath = Path.GetTempFileName();
-            var keyPath = Path.GetTempFileName();
-
             using (var sman = SecretsManager.CreateStore())
             {
                 sman.GenerateKey();
-                foreach(var key in SecureData.Keys)
+                foreach (var key in SecureData.Keys)
                 {
                     sman.Set(key, SecureData[key]);
                 }
                 sman.SaveStore(storePath);
                 sman.ExportKey(keyPath);
             }
+        }
+
+        [TestMethod]
+        public void StoreAndLoad()
+        {
+            var storePath = Path.GetTempFileName();
+            var keyPath = Path.GetTempFileName();
+
+            CreateTestStore(storePath, keyPath);
 
             using (var sman = SecretsManager.LoadStore(storePath))
             {
@@ -70,6 +75,28 @@ namespace Tests
                 foreach (var key in SecureData.Keys)
                 {
                     Assert.AreEqual(SecureData[key], sman.Retrieve(key), $"Retrieved data for key \"{key}\" does not match stored value!");
+                }
+            }
+        }
+
+
+        [TestMethod]
+        public void StoreAndLoadStream()
+        {
+            var storePath = Path.GetTempFileName();
+            var keyPath = Path.GetTempFileName();
+
+            CreateTestStore(storePath, keyPath);
+
+            using (var stream = new FileStream(storePath, FileMode.Open, FileAccess.Read))
+            {
+                using (var sman = SecretsManager.LoadStore(stream))
+                {
+                    sman.LoadKeyFromFile(keyPath);
+                    foreach (var key in SecureData.Keys)
+                    {
+                        Assert.AreEqual(SecureData[key], sman.Retrieve(key), $"Retrieved data for key \"{key}\" does not match stored value!");
+                    }
                 }
             }
         }

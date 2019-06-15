@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
@@ -39,6 +39,13 @@ namespace NeoSmart.SecureStore
         {
             var secretsManager = new SecretsManager();
             secretsManager.LoadSecretsFile(path);
+            return secretsManager;
+        }
+
+        public static SecretsManager LoadStore(Stream stream)
+        {
+            var secretsManager = new SecretsManager();
+            secretsManager.LoadSecretsStream(stream);
             return secretsManager;
         }
 
@@ -220,6 +227,13 @@ namespace NeoSmart.SecureStore
         private void LoadSecretsFile(string path)
         {
             using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read))
+            {
+                LoadSecretsStream(stream);
+            }
+        }
+
+        private void LoadSecretsStream(Stream stream)
+        {
             using (var reader = new StreamReader(stream, Encoding.UTF8))
             using (var jreader = new JsonTextReader(reader))
             {
@@ -230,6 +244,8 @@ namespace NeoSmart.SecureStore
                 }
             }
         }
+
+
 
         public string Retrieve(string name)
         {
