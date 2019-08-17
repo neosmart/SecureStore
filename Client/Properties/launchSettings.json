@@ -2,7 +2,7 @@
   "profiles": {
     "Client": {
       "commandName": "Project",
-      "commandLineArgs": "update -s test.bin -p 123 -k foo -v bar"
+      "commandLineArgs": "decrypt -s D:/git/securestore-rs/securestore/secrets.json -p mysecret -a"
     }
   }
 }

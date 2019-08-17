@@ -61,7 +61,7 @@ namespace Tests
             var fileData = File.ReadAllText(storePath);
             var deserialized = JsonConvert.DeserializeObject<dynamic>(fileData);
 
-            string base64 = deserialized.Data.foo.Payload;
+            string base64 = deserialized.Data.foo.payload;
             var bytes = Convert.FromBase64String(base64);
 
             //tamper with the data
@@ -80,7 +80,7 @@ namespace Tests
             using (var sman = SecretsManager.LoadStore(storePath))
             {
                 sman.LoadKeyFromPassword(password);
-                Assert.ThrowsException<TamperedCipherTextException>(() => sman.Retrieve("foo"), "Could not detect tampering with encrypted data!");
+                Assert.ThrowsException<TamperedCipherTextException>(() => sman.Get("foo"), "Could not detect tampering with encrypted data!");
             }
         }
 
@@ -106,7 +106,7 @@ namespace Tests
                 string retrieved = null;
                 try
                 {
-                    retrieved = sman.Retrieve("foo");
+                    retrieved = sman.Get("foo");
                 }
                 catch { }
                 Assert.AreNotEqual("bar", retrieved, "Retrieved encrypted data with wrong password!");

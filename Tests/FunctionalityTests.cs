@@ -1,4 +1,4 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NeoSmart.SecureStore;
 using System;
 using System.Collections.Generic;
@@ -74,7 +74,7 @@ namespace Tests
                 sman.LoadKeyFromFile(keyPath);
                 foreach (var key in SecureData.Keys)
                 {
-                    Assert.AreEqual(SecureData[key], sman.Retrieve(key), $"Retrieved data for key \"{key}\" does not match stored value!");
+                    Assert.AreEqual(SecureData[key], sman.Get(key), $"Retrieved data for key \"{key}\" does not match stored value!");
                 }
             }
         }
@@ -95,7 +95,7 @@ namespace Tests
                     sman.LoadKeyFromFile(keyPath);
                     foreach (var key in SecureData.Keys)
                     {
-                        Assert.AreEqual(SecureData[key], sman.Retrieve(key), $"Retrieved data for key \"{key}\" does not match stored value!");
+                        Assert.AreEqual(SecureData[key], sman.Get(key), $"Retrieved data for key \"{key}\" does not match stored value!");
                     }
                 }
             }

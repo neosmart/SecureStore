@@ -1,7 +1,6 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace NeoSmart.SecureStore.Client
 {
@@ -28,7 +27,7 @@ namespace NeoSmart.SecureStore.Client
             }
             else if (bool.TryParse(value, out var boolValue))
             {
-                _sman.Set(key, boolValue);
+                _sman.Set(key, boolValue ? 1 : 0);
             }
             else
             {
@@ -46,7 +45,7 @@ namespace NeoSmart.SecureStore.Client
 
         public void Decrypt(string key)
         {
-            if (!_sman.TryRetrieve(key, out string retrieved))
+            if (!_sman.TryGetValue(key, out string retrieved))
             {
                 throw new ExitCodeException(1, $"Key \"{key}\" not found in secrets store!");
             }
@@ -62,7 +61,7 @@ namespace NeoSmart.SecureStore.Client
             var decrypted = new Dictionary<string, dynamic>();
             foreach (var k in _sman.Keys)
             {
-                var v = _sman.Retrieve<dynamic>(k);
+                var v = _sman.Get(k);
                 decrypted[k] = v;
             }
 

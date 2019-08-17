@@ -4,8 +4,10 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using Newtonsoft.Json;
-using System.Security;
-using System.Runtime.InteropServices;
+
+#if ASYNC
+using System.Threading.Tasks;
+#endif
 
 #if NETSTANDARD1_3
 using Microsoft.AspNetCore.Cryptography.KeyDerivation;
@@ -15,14 +17,27 @@ namespace NeoSmart.SecureStore
 {
     sealed public class SecretsManager : IDisposable
     {
+        public static Encoding DefaultEncoding = new UTF8Encoding(false);
+
         private const int KEYCOUNT = 2;
         private const int KEYLENGTH = 128 / 8;
         private const int PBKDF2ROUNDS = 10000;
         private const int IVSIZE = 8;
 
         private Vault _vault;
-        private SecureBuffer _encryptionKey;
-        private SecureBuffer _hmacKey;
+        private SecureBuffer? _encryptionKey;
+        private SecureBuffer? _hmacKey;
+
+        public delegate SecureBuffer SerializeFunc<T>(T value);
+        public delegate T DeserializeFunc<T>(SecureBuffer serialized);
+        public delegate bool TryDeserializeFunc<T>(SecureBuffer serialized, out T deserialized);
+        public delegate void ByteReceiver(byte[] bytes);
+
+#if !JSON_SERIALIZER
+        public ISecretSerializer DefaultSerializer { get; set; } = null;
+#else
+        public ISecretSerializer DefaultSerializer { get; set; } = new Serializers.Utf8JsonSerializer();
+#endif
 
         private SecretsManager()
         {
@@ -49,22 +64,22 @@ namespace NeoSmart.SecureStore
             return secretsManager;
         }
 
+        // This is only used when creating a new vault, so it's OK to
+        // create an RNG each time.
         private static void GenerateBytes(byte[] buffer)
         {
 #if NETSTANDARD1_3
-            var rng = RandomNumberGenerator.Create();
+            using var rng = RandomNumberGenerator.Create();
+#elif NET40 || NET45
+            using var rng = new RNGCryptoServiceProvider();
 #else
             var rng = new RNGCryptoServiceProvider();
 #endif
 
             rng.GetBytes(buffer);
-
-#if !NET20 && !NET30 && !NET35
-            rng.Dispose();
-#endif
         }
 
-        //Generate a new key for a new store
+        // Generate a new key for a new store
         public void GenerateKey()
         {
             if (_encryptionKey != null)
@@ -73,12 +88,12 @@ namespace NeoSmart.SecureStore
             }
 
             _encryptionKey = new SecureBuffer(KEYLENGTH);
-            GenerateBytes(_encryptionKey.Buffer);
+            GenerateBytes(_encryptionKey?.Buffer);
             _hmacKey = new SecureBuffer(KEYLENGTH);
-            GenerateBytes(_hmacKey.Buffer);
+            GenerateBytes(_hmacKey?.Buffer);
         }
 
-        //Load an encryption key from a file
+        // Load an encryption key from a file
         public void LoadKeyFromFile(string path)
         {
             if (_encryptionKey != null)
@@ -86,9 +101,9 @@ namespace NeoSmart.SecureStore
                 throw new KeyAlreadyLoadedException();
             }
 
-            //We don't know how .NET buffers things in memory, so we write it ourselves for maximum security
-            //avoid excess buffering where possible, even if slow
-            using (var file = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.None))
+            // We don't know how .NET buffers things in memory, so we write it ourselves for maximum security.
+            // Avoid excess buffering where possible, even if it's slower.
+            using (var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.None))
             {
                 if (file.Length != KEYLENGTH * KEYCOUNT)
                 {
@@ -98,16 +113,63 @@ namespace NeoSmart.SecureStore
                 _encryptionKey = new SecureBuffer(KEYLENGTH);
                 _hmacKey = new SecureBuffer(KEYLENGTH);
 
-                foreach (var buffer in new [] { _encryptionKey.Buffer, _hmacKey.Buffer })
+                foreach (var buffer in new[] { _encryptionKey?.Buffer, _hmacKey?.Buffer })
                 {
-                    int bytesRead = file.Read(buffer, 0, KEYLENGTH);
-                    if (bytesRead != KEYLENGTH)
+                    int offset = 0;
+                    int bytesRead = -1;
+                    while (bytesRead != 0)
                     {
-                        throw new IOException("Unable to read from key file!");
+                        bytesRead = file.Read(buffer, offset, KEYLENGTH - offset);
+                        offset += bytesRead;
+                    }
+
+                    if (offset != KEYLENGTH)
+                    {
+                        throw new IOException("Error reading key from file!");
+                    }
+                }
+            }
+
+        }
+
+#if ASYNC
+        public async Task LoadKeyFromFileAsync(string path)
+        {
+            if (_encryptionKey != null)
+            {
+                throw new KeyAlreadyLoadedException();
+            }
+
+            // We don't know how .NET buffers things in memory, so we write it ourselves for maximum security.
+            // Avoid excess buffering where possible, even if it's slower.
+            using (var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous))
+            {
+                if (file.Length != KEYLENGTH * KEYCOUNT)
+                {
+                    throw new InvalidKeyFileException();
+                }
+
+                _encryptionKey = new SecureBuffer(KEYLENGTH);
+                _hmacKey = new SecureBuffer(KEYLENGTH);
+
+                foreach (var buffer in new[] { _encryptionKey?.Buffer, _hmacKey?.Buffer })
+                {
+                    int offset = 0;
+                    int bytesRead = -1;
+                    while (bytesRead != 0)
+                    {
+                        bytesRead = await file.ReadAsync(buffer, offset, KEYLENGTH - offset);
+                        offset += bytesRead;
+                    }
+
+                    if (offset != KEYLENGTH)
+                    {
+                        throw new IOException("Error reading key from file!");
                     }
                 }
             }
         }
+#endif
 
         public void ExportKey(string path)
         {
@@ -116,14 +178,32 @@ namespace NeoSmart.SecureStore
                 throw new NoKeyLoadedException();
             }
 
-            //We don't know how .NET buffers things in memory, so we write it ourselves for maximum security
-            //avoid excess buffering where possible, even if slow
-            using (var file = File.Create(path, 1, FileOptions.WriteThrough))
+            // We don't know how .NET buffers things in memory, so we write it ourselves for maximum security.
+            // Avoid excess buffering where possible, even if it's slower.
+            using (var file = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough))
             {
-                file.Write(_encryptionKey.Buffer, 0, KEYLENGTH);
-                file.Write(_hmacKey.Buffer, 0, KEYLENGTH);
+                file.Write(_encryptionKey?.Buffer, 0, KEYLENGTH);
+                file.Write(_hmacKey?.Buffer, 0, KEYLENGTH);
             }
         }
+
+#if ASYNC
+        public async Task ExportKeyAsync(string path)
+        {
+            if (_encryptionKey?.Buffer == null || _hmacKey?.Buffer == null)
+            {
+                throw new NoKeyLoadedException();
+            }
+
+            // We don't know how .NET buffers things in memory, so we write it ourselves for maximum security.
+            // Avoid excess buffering where possible, even if it's slower.
+            using (var file = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough | FileOptions.Asynchronous))
+            {
+                await file.WriteAsync(_encryptionKey?.Buffer, 0, KEYLENGTH);
+                await file.WriteAsync(_hmacKey?.Buffer, 0, KEYLENGTH);
+            }
+        }
+#endif
 
         public SecureBuffer ExportKey()
         {
@@ -133,8 +213,11 @@ namespace NeoSmart.SecureStore
             }
 
             var secure = new SecureBuffer(KEYLENGTH * 2);
-            Array.Copy(_encryptionKey.Buffer, secure.Buffer, KEYLENGTH);
-            Array.Copy(_hmacKey.Buffer, 0, secure.Buffer, KEYLENGTH, KEYLENGTH);
+            var buffers = new[] { _encryptionKey?.Buffer, _hmacKey?.Buffer };
+            for (int i = 0; i < buffers.Length; ++i)
+            {
+                Array.Copy(buffers[i], 0, secure.Buffer, i * KEYLENGTH, KEYLENGTH);
+            }
 
             return secure;
         }
@@ -160,21 +243,21 @@ namespace NeoSmart.SecureStore
                 throw new ArgumentException("Key with incorrect length provided!");
             }
 
-            //While the consensus is that AES and HMAC are "sufficiently different" that reusing
-            //the same key for Encrypt-then-MAC is probably safe, it's not something provable
-            //and therefore (esp. since we can without too much additional burden) we should use two
-            //separate keys.
+            // While the consensus is that AES and HMAC are "sufficiently different" that reusing
+            // the same key for Encrypt-then-MAC is probably safe, it's not something provable
+            // and therefore (esp. since we can without too much additional burden) we should use two
+            // separate keys.
             using (var temp = new SecureBuffer(insecure))
             {
                 _encryptionKey = new SecureBuffer(KEYLENGTH);
                 _hmacKey = new SecureBuffer(KEYLENGTH);
 
-                Array.Copy(temp.Buffer, 0, _encryptionKey.Buffer, 0, KEYLENGTH);
-                Array.Copy(temp.Buffer, KEYLENGTH, _hmacKey.Buffer, 0, KEYLENGTH);
+                Array.Copy(temp.Buffer, 0, _encryptionKey?.Buffer, 0, KEYLENGTH);
+                Array.Copy(temp.Buffer, KEYLENGTH, _hmacKey?.Buffer, 0, KEYLENGTH);
             }
         }
 
-        //Derive an encryption key from a password
+        // Derive an encryption key from a password
         public void LoadKeyFromPassword(string password)
         {
             if (_encryptionKey != null)
@@ -191,15 +274,16 @@ namespace NeoSmart.SecureStore
 
         public void LoadKey(SecureBuffer key)
         {
-            if (key == null)
-            {
-                throw new ArgumentNullException("key");
-            }
-
-            LoadKey(key.Buffer);
+            LoadKeyInsecure(key.Buffer);
         }
 
+        [Obsolete("Prefer using LoadKey(SecureBuffer key) instead")]
         public void LoadKey(byte[] key)
+        {
+            LoadKeyInsecure(key);
+        }
+
+        private void LoadKeyInsecure(byte[] key)
         {
             if (key == null)
             {
@@ -213,15 +297,14 @@ namespace NeoSmart.SecureStore
             SplitKey(key);
         }
 
+
         private void InitializeNewStore()
         {
-            _vault = new Vault();
-            _vault.IV = new byte[IVSIZE];
-            _vault.VaultVersion = Vault.SCHEMAVERSION;
-            _vault.Data = new SortedDictionary<string, EncryptedBlob>();
+            // Generate a new IV for password-based key derivation
+            var iv = new byte[IVSIZE];
+            GenerateBytes(iv);
 
-            //Generate a new IV for password-based key derivation
-            GenerateBytes(_vault.IV);
+            _vault = new Vault(iv);
         }
 
         private void LoadSecretsFile(string path)
@@ -245,48 +328,173 @@ namespace NeoSmart.SecureStore
             }
         }
 
-
-
-        public string Retrieve(string name)
+        public SecureBuffer GetBytes(string key)
         {
-            return Retrieve<string>(name);
+            return Decrypt(_vault.Data[key]);
         }
 
-        public T Retrieve<T>(string name)
+        public string Get(string key)
         {
-            using (var decrypted = new SecureBuffer(Decrypt(_vault.Data[name])))
+            using (var decrypted = Decrypt(_vault.Data[key]))
             {
-                //the conversion from bytes to string involves some non-shredded memory
-                return JsonConvert.DeserializeObject<T>(Encoding.UTF8.GetString(decrypted.Buffer));
+                return DefaultEncoding.GetString(decrypted.Buffer);
             }
         }
 
-        public bool TryRetrieve<T>(string name, out T value)
+        public bool TryGetBytes(string key, out SecureBuffer buffer)
         {
-            if (_vault.Data.ContainsKey(name))
+            if (!_vault.Data.ContainsKey(key))
             {
-                value = Retrieve<T>(name);
+                buffer = default;
+                return false;
+            }
+
+            buffer = GetBytes(key);
+            return true;
+        }
+
+        public bool TryGetBytes(string key, ByteReceiver receiver)
+        {
+            if (!_vault.Data.ContainsKey(key))
+            {
+                return false;
+            }
+
+            using (var buffer = GetBytes(key))
+            {
+                receiver(buffer.Buffer);
+            }
+
+            return true;
+        }
+
+        public bool TryGetValue<T>(string key, out T value)
+        {
+            if (!_vault.Data.ContainsKey(key))
+            {
+                value = default;
+                return false;
+            }
+
+            var decrypted = Decrypt(_vault.Data[key]);
+            if (typeof(T) == typeof(SecureBuffer))
+            {
+                value = (T)(object)decrypted;
                 return true;
             }
-            value = default(T);
+
+            if (typeof(T) == typeof(byte[]))
+            {
+                value = (T)(object)decrypted.Buffer;
+                return true;
+            }
+
+            using (decrypted)
+            {
+                if (typeof(T) == typeof(string))
+                {
+                    var result = Get(key);
+                    value = (T)(object)result;
+                    return true;
+                }
+
+                if (DefaultSerializer == null)
+                {
+                    throw new Exception("DefaultSerializer must be assigned!");
+                }
+
+                value = DefaultSerializer.Deserialize<T>(decrypted);
+                return true;
+            }
+        }
+
+        public bool TryGetValue<T>(string key, TryDeserializeFunc<T> deserialize, out T value)
+        {
+            if (!TryGetBytes(key, out var buffer))
+            {
+                value = default;
+                return false;
+            }
+
+            if (deserialize(buffer, out value))
+            {
+                return true;
+            }
+
+            value = default;
             return false;
         }
 
-        public void Set<T>(string name, T value)
+        public bool TryGetValue<T>(string key, DeserializeFunc<T> deserialize, out T value)
         {
-            //JsonConvert and the UTF8 conversion likely involve non-shredded memory
-            var insecure = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(value));
-            using (var secured = new SecureBuffer(insecure))
+            if (!TryGetBytes(key, out var encoded))
             {
-                _vault.Data[name] = Encrypt(secured);
+                value = default;
+                return false;
+            }
+
+            try
+            {
+                value = deserialize(encoded);
+                return true;
+            }
+            catch
+            {
+                value = default;
+                return false;
             }
         }
 
-        public bool Delete(string name)
+        public void Set(string key, SecureBuffer value)
         {
-            if (_vault.Data.ContainsKey(name))
+            _vault.Data[key] = Encrypt(value);
+        }
+
+        public void Set<T>(string key, T value, SerializeFunc<T> serialize)
+        {
+            Set(key, serialize(value));
+        }
+
+        public void Set<T>(string key, T value)
+        {
+            if (typeof(T) == typeof(string))
             {
-                _vault.Data.Remove(name);
+                // Strings must always be serialized as UTF-8 without a BOM
+                var @string = (string)(object)value;
+                var byteCount = DefaultEncoding.GetByteCount(@string);
+                using (var secure = new SecureBuffer(byteCount))
+                {
+                    DefaultEncoding.GetBytes(@string, 0, byteCount, secure.Buffer, 0);
+                    Set(key, secure);
+                }
+            }
+            else if (typeof(T) == typeof(byte[]))
+            {
+                var bytes = (byte[])(object)value;
+                using (var buffer = SecureBuffer.From(bytes))
+                {
+                    Set(key, buffer);
+                }
+            }
+            else
+            {
+                if (DefaultSerializer == null)
+                {
+                    throw new Exception("DefaultSerializer must be assigned!");
+                }
+
+                using (var buffer = DefaultSerializer.Serialize(value))
+                {
+                    Set(key, buffer);
+                }
+            }
+        }
+
+        public bool Delete(string key)
+        {
+            if (_vault.Data.ContainsKey(key))
+            {
+                _vault.Data.Remove(key);
                 return true;
             }
             return false;
@@ -294,9 +502,8 @@ namespace NeoSmart.SecureStore
 
         public void SaveStore(string path)
         {
-            var utf8NoBom = new UTF8Encoding(false);
             using (var stream = new FileStream(path, FileMode.Create, FileAccess.ReadWrite))
-            using (var writer = new StreamWriter(stream, utf8NoBom))
+            using (var writer = new StreamWriter(stream, DefaultEncoding))
             using (var jwriter = new JsonTextWriter(writer))
             {
                 jwriter.Formatting = Formatting.Indented;
@@ -321,7 +528,7 @@ namespace NeoSmart.SecureStore
             using (aes)
             {
                 aes.Mode = CipherMode.CBC;
-                aes.Key = _encryptionKey.Buffer;
+                aes.Key = _encryptionKey?.Buffer;
                 aes.BlockSize = 128;
                 aes.GenerateIV();
 
@@ -341,14 +548,14 @@ namespace NeoSmart.SecureStore
         private byte[] Authenticate(byte[] iv, byte[] encrypted)
         {
 #if NETSTANDARD1_3
-            var hmac = new System.Security.Cryptography.HMACSHA1(_hmacKey.Buffer);
+            var hmac = new HMACSHA1(_hmacKey?.Buffer);
             var composite = new byte[iv.Length + encrypted.Length];
             Array.Copy(iv, 0, composite, 0, iv.Length);
             Array.Copy(encrypted, 0, composite, iv.Length, encrypted.Length);
             var result = hmac.ComputeHash(composite);
 #else
-            var hmac = System.Security.Cryptography.HMACSHA1.Create();
-            hmac.Key = _hmacKey.Buffer;
+            var hmac = HMACSHA1.Create();
+            hmac.Key = _hmacKey?.Buffer;
 
             hmac.TransformBlock(iv, 0, iv.Length, iv, 0);
             hmac.TransformFinalBlock(encrypted, 0, encrypted.Length);
@@ -363,7 +570,7 @@ namespace NeoSmart.SecureStore
             return result;
         }
 
-        private byte[] Decrypt(EncryptedBlob blob)
+        private SecureBuffer Decrypt(EncryptedBlob blob)
         {
             SymmetricAlgorithm aes;
 
@@ -375,7 +582,7 @@ namespace NeoSmart.SecureStore
             aes = new AesCryptoServiceProvider();
 #endif
 
-            //first validate the HMAC
+            // Validate the HMAC
             var calculatedHmac = Authenticate(blob.IV, blob.Payload);
 
             if (calculatedHmac.Length != blob.Hmac.Length)
@@ -383,7 +590,7 @@ namespace NeoSmart.SecureStore
                 throw new TamperedCipherTextException();
             }
 
-            //compare without early abort
+            // Compare without early abort for timing attack resistance
             int mismatches = 0;
             for (int i = 0; i < calculatedHmac.Length; ++i)
             {
@@ -397,29 +604,42 @@ namespace NeoSmart.SecureStore
             using (aes)
             {
                 aes.Mode = CipherMode.CBC;
-                aes.Key = _encryptionKey.Buffer;
+                aes.Key = _encryptionKey?.Buffer;
                 aes.BlockSize = 128;
                 aes.IV = blob.IV;
 
                 using (var decryptor = aes.CreateDecryptor())
                 {
-                    return decryptor.TransformFinalBlock(blob.Payload, 0, blob.Payload.Length);
+                    var unsecured = decryptor.TransformFinalBlock(blob.Payload, 0, blob.Payload.Length);
+                    return new SecureBuffer(unsecured);
                 }
             }
         }
 
         public void Dispose()
         {
-            if (_hmacKey != null)
-            {
-                _hmacKey.Dispose();
-                _hmacKey = null;
-            }
-            if (_encryptionKey != null)
-            {
-                _encryptionKey.Dispose();
-                _encryptionKey = null;
-            }
+            _hmacKey?.Dispose();
+            _encryptionKey?.Dispose();
+            _encryptionKey = null;
         }
+
+#region Obsolete
+        [Obsolete("Use SecretsManager.TryGetValue(..) instead.")]
+        public bool TryRetrieve<T>(string key, out T value)
+        {
+            return TryGetValue<T>(key, out value);
+        }
+
+        [Obsolete("Use SecretsManager.Get(..) instead.")]
+        public string Retrieve(string key)
+        {
+            if (!TryGetValue<string>(key, out var result))
+            {
+                throw new KeyNotFoundException();
+            }
+
+            return result;
+        }
+#endregion
     }
 }
