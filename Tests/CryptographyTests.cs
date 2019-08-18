@@ -2,7 +2,6 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NeoSmart.SecureStore;
 using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
@@ -49,7 +48,7 @@ namespace Tests
             const string password = "password";
             string storePath = Path.GetTempFileName();
 
-            //generate a valid store
+            // Generate a valid store
             using (var sman = SecretsManager.CreateStore())
             {
                 sman.LoadKeyFromPassword(password);
@@ -57,26 +56,28 @@ namespace Tests
                 sman.SaveStore(storePath);
             }
 
-            //load the store contents into memory
+            // Load the store contents into memory
             var fileData = File.ReadAllText(storePath);
+            // We don't have access to the internal encrypted payloads are
+            // deserialized into, but we can just directly access it.
             var deserialized = JsonConvert.DeserializeObject<dynamic>(fileData);
 
             string base64 = deserialized.Data.foo.payload;
             var bytes = Convert.FromBase64String(base64);
 
-            //tamper with the data
+            // Tamper with the data
             var prng = new Random();
             for (int i = 0; i < bytes.Length; ++i)
             {
                 bytes[i] ^= (byte)prng.Next();
             }
 
-            //write the changes back
+            // Write the changes back
             deserialized.Data.foo.Payload = Convert.ToBase64String(bytes);
             fileData = JsonConvert.SerializeObject(deserialized);
             File.WriteAllText(storePath, fileData);
 
-            //test decryption
+            // Verify that tampering is caught
             using (var sman = SecretsManager.LoadStore(storePath))
             {
                 sman.LoadKeyFromPassword(password);
@@ -134,7 +135,7 @@ namespace Tests
                 sman.ExportKey(path2);
             }
 
-            //verify that keys are not the same
+            // Verify that keys are not the same
             var key1 = File.ReadAllBytes(path1);
             var key2 = File.ReadAllBytes(path2);
 

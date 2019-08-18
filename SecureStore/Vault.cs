@@ -9,7 +9,10 @@ namespace NeoSmart.SecureStore
     {
         /* Schema Changelog:
          * v1: Initial version, all values are stored as JSON-encoded
-         * v2: Strings stored as UTF8, bytes stored as-is (unserialized), numbers stored as Big Endian
+         * v2: Strings stored as UTF8, bytes stored as-is (unserialized),
+         *     and fields renamed more descriptively and camelCased per
+         *     JSON conventions (VaultVersion -> version, IV -> iv,
+         *     Data -> secrets)
          */
         internal const int SCHEMAVERSION = 2;
 
