@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace NeoSmart.SecureStore
 {
@@ -49,17 +49,6 @@ namespace NeoSmart.SecureStore
         }
 
         public TamperedCipherTextException() : this("Either a wrong password has been used or the ciphertext in this secure store has been tampered with!")
-        {
-        }
-    }
-
-    public class UnsupportedVaultVersionException : SecretsException
-    {
-        public UnsupportedVaultVersionException(string message) : base(message)
-        {
-        }
-
-        public UnsupportedVaultVersionException() : this("An attempt was made to load a secrets file that cannot be read with this version of SecureStore!")
         {
         }
     }

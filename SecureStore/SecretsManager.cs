@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 
 #if ASYNC
 using System.Threading.Tasks;
+using NeoSmart.SecureStore.Versioning;
 #endif
 
 #if NETSTANDARD1_3
@@ -17,7 +18,15 @@ namespace NeoSmart.SecureStore
 {
     sealed public class SecretsManager : IDisposable
     {
-        public static Encoding DefaultEncoding = new UTF8Encoding(false);
+        /// <summary>
+        /// Determines runtime behavior when older schema versions are loaded.
+        ///
+        /// (This will likely default to <see cref="Versioning.VaultVersionPolicy.Strict"/> at
+        /// some point in the future close to version 1.0)
+        /// </summary>
+        public static Versioning.VaultVersionPolicy VaultVersionPolicy { get; set; } = Versioning.VaultVersionPolicy.Upgrade;
+
+        public static Encoding DefaultEncoding { get; } = new UTF8Encoding(false);
 
         private const int KEYCOUNT = 2;
         private const int KEYLENGTH = 128 / 8;
@@ -27,6 +36,7 @@ namespace NeoSmart.SecureStore
         private Vault _vault;
         private SecureBuffer? _encryptionKey;
         private SecureBuffer? _hmacKey;
+        private bool _vaultUpgradePending = false;
 
         public delegate SecureBuffer SerializeFunc<T>(T value);
         public delegate T DeserializeFunc<T>(SecureBuffer serialized);
@@ -130,6 +140,7 @@ namespace NeoSmart.SecureStore
                 }
             }
 
+            CheckUpgrade();
         }
 
 #if ASYNC
@@ -168,6 +179,8 @@ namespace NeoSmart.SecureStore
                     }
                 }
             }
+
+            CheckUpgrade();
         }
 #endif
 
@@ -254,6 +267,9 @@ namespace NeoSmart.SecureStore
 
                 Array.Copy(temp.Buffer, 0, _encryptionKey?.Buffer, 0, KEYLENGTH);
                 Array.Copy(temp.Buffer, KEYLENGTH, _hmacKey?.Buffer, 0, KEYLENGTH);
+
+                // Before overwriting the key in memory
+                CheckUpgrade();
             }
         }
 
@@ -317,14 +333,27 @@ namespace NeoSmart.SecureStore
 
         private void LoadSecretsStream(Stream stream)
         {
-            using (var reader = new StreamReader(stream, Encoding.UTF8))
+            using (var reader = new StreamReader(stream, DefaultEncoding))
             using (var jreader = new JsonTextReader(reader))
             {
-                _vault = JsonSerializer.Create().Deserialize<Vault>(jreader);
+                _vault = JsonSerializer.Create().Deserialize<VaultLoader>(jreader);
                 if (_vault.VaultVersion > Vault.SCHEMAVERSION)
                 {
-                    throw new UnsupportedVaultVersionException();
+                    throw Versioning.VaultVersionException.UnsupportedVersion();
                 }
+                if (_vault.VaultVersion != Vault.SCHEMAVERSION)
+                {
+                    _vaultUpgradePending = true;
+                }
+            }
+        }
+
+        private void CheckUpgrade()
+        {
+            if (_vaultUpgradePending && _vault != null && _encryptionKey != null)
+            {
+                var upgrade = new Versioning.VaultUpgrade();
+                upgrade.Upgrade(this, _vault);
             }
         }
 
