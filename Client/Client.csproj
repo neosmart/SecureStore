@@ -4,6 +4,7 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp2.2</TargetFramework>
     <AssemblyName>SSClient</AssemblyName>
+    <LangVersion>8.0</LangVersion>
     <RootNamespace>NeoSmart.SecureStore.Client</RootNamespace>
   </PropertyGroup>
 

@@ -20,7 +20,11 @@ namespace NeoSmart.SecureStore.Client
 
         public void Update(string key, string value)
         {
-            //manually attempt to handle a few particular types
+            // Force validation to avoid loss of sensitive data
+            if (_sman.TryGetBytes(key, out var buffer))
+            {
+            }
+            // Manually attempt to handle a few particular types
             if (!value.StartsWith("0") && int.TryParse(value, out var intValue))
             {
                 _sman.Set(key, intValue);
