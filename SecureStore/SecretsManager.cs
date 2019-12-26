@@ -37,6 +37,7 @@ namespace NeoSmart.SecureStore
         private SecureBuffer? _encryptionKey;
         private SecureBuffer? _hmacKey;
         private bool _vaultUpgradePending = false;
+        private bool _sentinelValidated = false;
 
         public delegate SecureBuffer SerializeFunc<T>(T value);
         public delegate T DeserializeFunc<T>(SecureBuffer serialized);
@@ -323,6 +324,26 @@ namespace NeoSmart.SecureStore
             _vault = new Vault(iv);
         }
 
+        internal void CreateSentinel()
+        {
+            if (_vault.Sentinel is null)
+            {
+                var sentinel = new SecureBuffer(IVSIZE * 2);
+                GenerateBytes(sentinel.Buffer);
+                _vault.Sentinel = Encrypt(sentinel);
+                _sentinelValidated = true;
+            }
+        }
+
+        internal void ValidateSentinel()
+        {
+            if (!_sentinelValidated && !(_vault.Sentinel is null))
+            {
+                _ = Decrypt(_vault.Sentinel.Value);
+                _sentinelValidated = true;
+            }
+        }
+
         private void LoadSecretsFile(string path)
         {
             using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read))
@@ -480,6 +501,7 @@ namespace NeoSmart.SecureStore
 
         public void Set(string key, SecureBuffer value)
         {
+            ValidateSentinel();
             _vault.Data[key] = Encrypt(value);
         }
 
@@ -535,6 +557,8 @@ namespace NeoSmart.SecureStore
 
         public void SaveStore(string path)
         {
+            CreateSentinel();
+
             using (var stream = new FileStream(path, FileMode.Create, FileAccess.ReadWrite))
             using (var writer = new StreamWriter(stream, DefaultEncoding))
             using (var jwriter = new JsonTextWriter(writer))

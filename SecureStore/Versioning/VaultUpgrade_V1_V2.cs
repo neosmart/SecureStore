@@ -39,6 +39,8 @@ namespace NeoSmart.SecureStore.Versioning
                 }
             }
 
+            sman.CreateSentinel();
+
             return true;
         }
     }

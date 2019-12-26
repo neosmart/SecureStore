@@ -12,7 +12,8 @@ namespace NeoSmart.SecureStore
          * v1: Initial version, all values are stored as JSON-encoded
          * v2: Strings stored as UTF8, bytes stored as-is (unserialized),
          *     and fields renamed more descriptively and camelCased per
-         *     JSON conventions (VaultVersion -> version, Data -> secrets)
+         *     JSON conventions (VaultVersion -> version, Data -> secrets),
+         *     and added an optional Sentinel field.
          */
         internal const int SCHEMAVERSION = 2;
 
@@ -27,6 +28,16 @@ namespace NeoSmart.SecureStore
         /// </summary>
         [JsonProperty(PropertyName = "iv")]
         public byte[] IV { get; set; }
+
+        /// <summary>
+        /// We store a randomly-generated sentinel value in the store when it is first created.
+        /// This has no impact on the security of the contents but does affect integrity: it lets
+        /// us ensure that subsequent inserts are performed with the same key, preventing potential
+        /// loss of data if a user fat-fingered the password and attempts to encrypt a key with an
+        /// incorrect password or wrong keyfile.
+        /// </summary>
+        [JsonProperty(PropertyName = "sentinel")]
+        public EncryptedBlob? Sentinel { get; set; }
 
         /// <summary>
         /// All secrets stored in this vault, sorted by name.
