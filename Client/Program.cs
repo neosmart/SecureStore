@@ -446,7 +446,7 @@ namespace NeoSmart.SecureStore.Client
                 Console.Error.Write(message);
                 switch (Console.ReadLine().ToLower())
                 {
-                    case "yes": break;
+                    case "yes": return;
                     case "no": throw new ExitCodeException(1);
                     default: continue;
                 }
