@@ -382,7 +382,11 @@ namespace NeoSmart.SecureStore
             return true;
         }
 
+#if ASYNC
+        public bool TryGetBytes(string key, Action<byte[]> receiver)
+#else
         public bool TryGetBytes(string key, ByteReceiver receiver)
+#endif
         {
             if (!_vault.Data.ContainsKey(key))
             {
