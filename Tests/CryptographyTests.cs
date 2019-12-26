@@ -2,8 +2,10 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NeoSmart.SecureStore;
 using Newtonsoft.Json;
 using System;
+using System.Dynamic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Tests
 {
@@ -58,12 +60,11 @@ namespace Tests
 
             // Load the store contents into memory
             var fileData = File.ReadAllText(storePath);
-            // We don't have access to the internal encrypted payloads are
-            // deserialized into, but we can just directly access it.
-            var deserialized = JsonConvert.DeserializeObject<dynamic>(fileData);
+            // We don't have access to the internal encrypted bytes payloads are
+            // deserialized to, but we can just access it directly.
+            var deserialized = JsonConvert.DeserializeObject<MockStore>(fileData);
 
-            string base64 = deserialized.Data.foo.payload;
-            var bytes = Convert.FromBase64String(base64);
+            var bytes = deserialized.Secrets["foo"].Payload;
 
             // Tamper with the data
             var prng = new Random();
@@ -73,7 +74,7 @@ namespace Tests
             }
 
             // Write the changes back
-            deserialized.Data.foo.Payload = Convert.ToBase64String(bytes);
+            deserialized.Secrets["foo"].Payload = bytes;
             fileData = JsonConvert.SerializeObject(deserialized);
             File.WriteAllText(storePath, fileData);
 
