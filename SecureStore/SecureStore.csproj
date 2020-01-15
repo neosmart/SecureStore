@@ -1,16 +1,16 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net40;net45;netstandard1.3</TargetFrameworks>
+    <TargetFrameworks>net40;net45;netstandard1.3;netstandard2.0;netcoreapp3.0</TargetFrameworks>
     <AssemblyName>NeoSmart.SecureStore</AssemblyName>
     <RootNamespace>NeoSmart.SecureStore</RootNamespace>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageId>SecureStore</PackageId>
-    <Version>0.3.3</Version>
+    <Version>0.4.0</Version>
     <Authors>NeoSmart Technologies, Mahmoud Al-Qudsi</Authors>
     <Company>NeoSmart Technologies</Company>
     <Description>A simple but secure secrets manager library for .NET and .NET Core, with on-disk encrypted storage. Securely store passwords and private keys in a git-friendly, human-readable format, optimized for local development and secure remote deployment.</Description>
-    <Copyright>Copyright NeoSmart Technologies 2015 - 2017</Copyright>
+    <Copyright>Copyright NeoSmart Technologies 2015 - 2019</Copyright>
     <PackageLicenseUrl>https://cdn.rawgit.com/neosmart/SecureStore/master/LICENSE</PackageLicenseUrl>
     <PackageProjectUrl>https://github.com/neosmart/SecureStore</PackageProjectUrl>
     <RepositoryUrl>https://github.com/neosmart/SecureStore</RepositoryUrl>
@@ -20,8 +20,8 @@
     <PackageReleaseNotes>* Added option to export key as SecureBuffer in 0.3.2
 * Added LoadKey() function to load a key from a buffer in 0.3.1
 * Revamped API and more security in 0.3</PackageReleaseNotes>
-    <AssemblyVersion>0.3.3.0</AssemblyVersion>
-    <FileVersion>0.3.3.0</FileVersion>
+    <AssemblyVersion>0.4.0.0</AssemblyVersion>
+    <FileVersion>0.4.0.0</FileVersion>
   </PropertyGroup>
 
   <PropertyGroup>

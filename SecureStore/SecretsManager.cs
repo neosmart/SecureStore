@@ -79,7 +79,7 @@ namespace NeoSmart.SecureStore
         // create an RNG each time.
         private static void GenerateBytes(byte[] buffer)
         {
-#if NETSTANDARD1_3
+#if NETSTANDARD1_3 || NETSTANDARD2_0 || NETCOREAPP3_0
             using var rng = RandomNumberGenerator.Create();
 #elif NET40 || NET45
             using var rng = new RNGCryptoServiceProvider();
@@ -574,7 +574,7 @@ namespace NeoSmart.SecureStore
         {
             EncryptedBlob blob;
 
-#if NETSTANDARD1_3
+#if NETSTANDARD1_3 || NETSTANDARD2_0 || NETCOREAPP3_0
             var aes = Aes.Create();
 #elif NET20 || NET30
             var aes = Rijndael.Create();
@@ -604,7 +604,7 @@ namespace NeoSmart.SecureStore
 
         private byte[] Authenticate(byte[] iv, byte[] encrypted)
         {
-#if NETSTANDARD1_3
+#if NETSTANDARD1_3 || NETSTANDARD2_0 || NETCOREAPP3_0
             var hmac = new HMACSHA1(_hmacKey?.Buffer);
             var composite = new byte[iv.Length + encrypted.Length];
             Array.Copy(iv, 0, composite, 0, iv.Length);
@@ -631,7 +631,7 @@ namespace NeoSmart.SecureStore
         {
             SymmetricAlgorithm aes;
 
-#if NETSTANDARD1_3
+#if NETSTANDARD1_3 || NETSTANDARD2_0 || NETCOREAPP3_0
             aes = Aes.Create();
 #elif NET20 || NET30
             aes = Rijndael.Create();
