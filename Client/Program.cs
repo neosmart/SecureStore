@@ -195,7 +195,7 @@ namespace NeoSmart.SecureStore.Client
 
                         // This was the password index
                         var bareIndex = bareArguments.FindIndex(arg => arg == args[i + 1]);
-                        if (bareIndex > 0)
+                        if (bareIndex >= 0)
                         {
                             password = bareArguments[bareIndex];
                             bareArguments.RemoveAt(bareIndex);
@@ -250,10 +250,11 @@ namespace NeoSmart.SecureStore.Client
                 }
 
                 // Handle common parameters
-                if (bareArguments.Count > 0)
-                {
-                    Help(Console.Error, "Invalid arguments!", command, parseOptions);
-                }
+                // if (bareArguments.Count > 0)
+                // {
+                //     Console.Error.Write($"BareArguments[0]: {bareArguments[0]}");
+                //     Help(Console.Error, "Invalid arguments!", command, parseOptions);
+                // }
 
                 if (string.IsNullOrWhiteSpace(path))
                 {
