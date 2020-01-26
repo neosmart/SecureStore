@@ -27,7 +27,7 @@ namespace NeoSmart.SecureStore
         /// The initialization vector used for password-based key derivation.
         /// </summary>
         [JsonProperty(PropertyName = "iv")]
-        public byte[] IV { get; set; }
+        public byte[] IV;
 
         /// <summary>
         /// We store a randomly-generated sentinel value in the store when it is first created.
