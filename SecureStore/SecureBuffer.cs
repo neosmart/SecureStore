@@ -1,6 +1,5 @@
 using System;
 using System.Runtime.InteropServices;
-using System.Security.Cryptography;
 
 namespace NeoSmart.SecureStore
 {
@@ -59,14 +58,7 @@ namespace NeoSmart.SecureStore
         public void Dispose()
         {
             // Overwrite key in memory before leaving
-#if NETSTANDARD1_3
-            using var rng = RandomNumberGenerator.Create();
-#elif NET40 || NET45
-            using var rng = new RNGCryptoServiceProvider();
-#else
-            var rng = new RNGCryptoServiceProvider();
-#endif
-            rng.GetBytes(Buffer);
+            SecretsManager.GenerateBytes(Buffer);
 
             // Un-pin the memory pointed to by the buffer
             _gcHandle.Free();

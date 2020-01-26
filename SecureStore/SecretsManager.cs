@@ -4,6 +4,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using Newtonsoft.Json;
+using System.Threading;
 
 #if ASYNC
 using System.Threading.Tasks;
@@ -26,7 +27,15 @@ namespace NeoSmart.SecureStore
         /// </summary>
         public static Versioning.VaultVersionPolicy VaultVersionPolicy { get; set; } = Versioning.VaultVersionPolicy.Upgrade;
 
-        public static Encoding DefaultEncoding { get; } = new UTF8Encoding(false);
+        internal static ThreadLocal<RandomNumberGenerator> SecureRng = new ThreadLocal<RandomNumberGenerator> (() =>
+#if NETSTANDARD1_3 || NETSTANDARD2_0 || NETCOREAPP3_0
+            RandomNumberGenerator.Create()
+#else
+            new RNGCryptoServiceProvider()
+#endif
+        );
+
+        internal static Encoding DefaultEncoding { get; } = new UTF8Encoding(false);
 
         private const int KEYCOUNT = 2;
         private const int KEYLENGTH = 128 / 8;
@@ -75,19 +84,9 @@ namespace NeoSmart.SecureStore
             return secretsManager;
         }
 
-        // This is only used when creating a new vault, so it's OK to
-        // create an RNG each time.
-        private static void GenerateBytes(byte[] buffer)
+        internal static void GenerateBytes(byte[] buffer)
         {
-#if NETSTANDARD1_3 || NETSTANDARD2_0 || NETCOREAPP3_0
-            using var rng = RandomNumberGenerator.Create();
-#elif NET40 || NET45
-            using var rng = new RNGCryptoServiceProvider();
-#else
-            var rng = new RNGCryptoServiceProvider();
-#endif
-
-            rng.GetBytes(buffer);
+            SecureRng.Value.GetBytes(buffer);
         }
 
         // Generate a new key for a new store
@@ -680,7 +679,7 @@ namespace NeoSmart.SecureStore
             _encryptionKey = null;
         }
 
-#region Obsolete
+        #region Obsolete
         [Obsolete("Use SecretsManager.TryGetValue(..) instead.")]
         public bool TryRetrieve<T>(string key, out T value)
         {
@@ -697,6 +696,6 @@ namespace NeoSmart.SecureStore
 
             return result;
         }
-#endregion
+        #endregion
     }
 }
