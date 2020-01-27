@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -22,7 +22,7 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <StartupObject></StartupObject>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
     <DebugSymbols>true</DebugSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <PackAsTool>true</PackAsTool>
