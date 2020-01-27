@@ -14,21 +14,22 @@ namespace NeoSmart.SecureStore
          *     and fields renamed more descriptively and camelCased per
          *     JSON conventions (VaultVersion -> version, Data -> secrets),
          *     and added an optional Sentinel field.
-         * v3: Upgrade from 10,000 PBKDF2 rounds to 256,000 rounds.
+         * v3: Upgrade from 10,000 PBKDF2 rounds to 256,000 rounds
+         *     and upgrade seed from 64 bits to 128 bits.
          */
         internal const int SCHEMAVERSION = 3;
 
         /// <summary>
         /// The schema version of the loaded vault instance.
         /// </summary>
-        [JsonProperty(PropertyName = "version")]
+        [JsonProperty(PropertyName = "version", Order = 1)]
         public int VaultVersion { get; set; }
 
         /// <summary>
         /// The initialization vector used for password-based key derivation.
         /// </summary>
-        [JsonProperty(PropertyName = "iv")]
-        public byte[] IV;
+        [JsonProperty(PropertyName = "iv", Order = 2)]
+        public byte[] IV { get; set; }
 
         /// <summary>
         /// We store a randomly-generated sentinel value in the store when it is first created.
@@ -37,13 +38,13 @@ namespace NeoSmart.SecureStore
         /// loss of data if a user fat-fingered the password and attempts to encrypt a key with an
         /// incorrect password or wrong keyfile.
         /// </summary>
-        [JsonProperty(PropertyName = "sentinel")]
+        [JsonProperty(PropertyName = "sentinel", Order = 3)]
         public EncryptedBlob? Sentinel { get; set; }
 
         /// <summary>
         /// All secrets stored in this vault, sorted by name.
         /// </summary>
-        [JsonProperty(PropertyName = "secrets")]
+        [JsonProperty(PropertyName = "secrets", Order = 4)]
         public SortedDictionary<string, EncryptedBlob> Data { get; set; }
 
         internal Vault(byte[] iv)

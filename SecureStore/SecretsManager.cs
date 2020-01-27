@@ -253,7 +253,7 @@ namespace NeoSmart.SecureStore
 #endif
         }
 
-        internal void SplitKey(byte[] insecure)
+        internal void SplitAndLoadKey(byte[] insecure)
         {
             if (insecure.Length != KEYLENGTH * 2)
             {
@@ -280,7 +280,7 @@ namespace NeoSmart.SecureStore
             }
 
             var insecure = DerivePassword(password, _vault.IV);
-            SplitKey(insecure);
+            SplitAndLoadKey(insecure);
 
             CheckUpgrade(password);
         }
@@ -307,7 +307,7 @@ namespace NeoSmart.SecureStore
                 throw new KeyAlreadyLoadedException();
             }
 
-            SplitKey(key);
+            SplitAndLoadKey(key);
         }
 
 
