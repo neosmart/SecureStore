@@ -51,19 +51,20 @@ namespace NeoSmart.SecureStore.Versioning
         int FromVersion { get; }
         int ToVersion { get; }
 
-        bool Upgrade(SecretsManager sman, Vault vault /*, SecureBuffer keyData*/);
+        bool Upgrade(SecretsManager sman, Vault vault, string password);
     }
 
     internal class VaultUpgrade
     {
-        Dictionary<int, IVaultUpgrade> _upgradeMap = new Dictionary<int, IVaultUpgrade>();
+        readonly Dictionary<int, IVaultUpgrade> _upgradeMap = new Dictionary<int, IVaultUpgrade>();
 
         public VaultUpgrade()
         {
             _upgradeMap.Add(1, new VaultUpgrade_V1_V2());
+            _upgradeMap.Add(2, new VaultUpgrade_V2_V3());
         }
 
-        public void Upgrade(SecretsManager sman, Vault vault)
+        public void Upgrade(SecretsManager sman, Vault vault, string password)
         {
             while (vault.VaultVersion != Vault.SCHEMAVERSION)
             {
@@ -71,10 +72,14 @@ namespace NeoSmart.SecureStore.Versioning
                 {
                     try
                     {
-                        if (!upgrade.Upgrade(sman, vault))
+                        if (!upgrade.Upgrade(sman, vault, password))
                         {
                             throw VaultVersionException.UpgradeException();
                         }
+                    }
+                    catch (VaultVersionException)
+                    {
+                        throw;
                     }
                     catch
                     {

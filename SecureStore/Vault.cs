@@ -14,8 +14,9 @@ namespace NeoSmart.SecureStore
          *     and fields renamed more descriptively and camelCased per
          *     JSON conventions (VaultVersion -> version, Data -> secrets),
          *     and added an optional Sentinel field.
+         * v3: Upgrade from 10,000 PBKDF2 rounds to 256,000 rounds.
          */
-        internal const int SCHEMAVERSION = 2;
+        internal const int SCHEMAVERSION = 3;
 
         /// <summary>
         /// The schema version of the loaded vault instance.

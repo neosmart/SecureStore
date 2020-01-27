@@ -38,7 +38,7 @@ namespace NeoSmart.SecureStore
 
         private const int KEYCOUNT = 2;
         private const int KEYLENGTH = 128 / 8;
-        private const int PBKDF2ROUNDS = 10000;
+        private const int PBKDF2ROUNDS = 256000;
         private const int IVSIZE = 8;
 
         private Vault _vault;
@@ -51,6 +51,11 @@ namespace NeoSmart.SecureStore
         public delegate T DeserializeFunc<T>(SecureBuffer serialized);
         public delegate bool TryDeserializeFunc<T>(SecureBuffer serialized, out T deserialized);
         public delegate void ByteReceiver(byte[] bytes);
+
+        /// <summary>
+        /// The vault has been upgraded to a new schema version. Changes should be saved to disk.
+        /// </summary>
+        public bool StoreUpgraded { get; set; } = false;
 
 #if !JSON_SERIALIZER
         public ISecretSerializer DefaultSerializer { get; set; } = null;
@@ -234,21 +239,21 @@ namespace NeoSmart.SecureStore
             return secure;
         }
 
-        static private byte[] DerivePassword(string password, byte[] salt)
+        static internal byte[] DerivePassword(string password, byte[] salt, int rounds = PBKDF2ROUNDS)
         {
 #if NETSTANDARD1_3
-            return KeyDerivation.Pbkdf2(password, salt, KeyDerivationPrf.HMACSHA1, PBKDF2ROUNDS, KEYLENGTH * KEYCOUNT);
+            return KeyDerivation.Pbkdf2(password, salt, KeyDerivationPrf.HMACSHA1, rounds, KEYLENGTH * KEYCOUNT);
 #elif NET20 || NET30 || NET35
-            return new Rfc2898DeriveBytes(password, salt, PBKDF2ROUNDS).GetBytes(KEYLENGTH * KEYCOUNT);
+            return new Rfc2898DeriveBytes(password, salt, rounds).GetBytes(KEYLENGTH * KEYCOUNT);
 #else
-            using (var pbkdf2 = new Rfc2898DeriveBytes(password, salt, PBKDF2ROUNDS))
+            using (var pbkdf2 = new Rfc2898DeriveBytes(password, salt, rounds))
             {
                 return pbkdf2.GetBytes(KEYLENGTH * KEYCOUNT);
             }
 #endif
         }
 
-        private void SplitKey(byte[] insecure)
+        internal void SplitKey(byte[] insecure)
         {
             if (insecure.Length != KEYLENGTH * 2)
             {
@@ -259,17 +264,11 @@ namespace NeoSmart.SecureStore
             // the same key for Encrypt-then-MAC is probably safe, it's not something provable
             // and therefore (esp. since we can without too much additional burden) we should use two
             // separate keys.
-            using (var temp = new SecureBuffer(insecure))
-            {
-                _encryptionKey = new SecureBuffer(KEYLENGTH);
-                _hmacKey = new SecureBuffer(KEYLENGTH);
+            _encryptionKey = new SecureBuffer(KEYLENGTH);
+            _hmacKey = new SecureBuffer(KEYLENGTH);
 
-                Array.Copy(temp.Buffer, 0, _encryptionKey?.Buffer, 0, KEYLENGTH);
-                Array.Copy(temp.Buffer, KEYLENGTH, _hmacKey?.Buffer, 0, KEYLENGTH);
-
-                // Before overwriting the key in memory
-                CheckUpgrade();
-            }
+            Array.Copy(insecure, 0, _encryptionKey?.Buffer, 0, KEYLENGTH);
+            Array.Copy(insecure, KEYLENGTH, _hmacKey?.Buffer, 0, KEYLENGTH);
         }
 
         // Derive an encryption key from a password
@@ -281,10 +280,9 @@ namespace NeoSmart.SecureStore
             }
 
             var insecure = DerivePassword(password, _vault.IV);
-            using (var sb = new SecureBuffer(insecure))
-            {
-                SplitKey(insecure);
-            }
+            SplitKey(insecure);
+
+            CheckUpgrade(password);
         }
 
         public void LoadKey(SecureBuffer key)
@@ -367,12 +365,13 @@ namespace NeoSmart.SecureStore
             }
         }
 
-        private void CheckUpgrade()
+        private void CheckUpgrade(string password = null)
         {
             if (_vaultUpgradePending && _vault != null && _encryptionKey != null)
             {
                 var upgrade = new Versioning.VaultUpgrade();
-                upgrade.Upgrade(this, _vault);
+                upgrade.Upgrade(this, _vault, password);
+                StoreUpgraded = true;
             }
         }
 
@@ -625,7 +624,7 @@ namespace NeoSmart.SecureStore
             return result;
         }
 
-        private SecureBuffer Decrypt(EncryptedBlob blob)
+        internal SecureBuffer Decrypt(EncryptedBlob blob)
         {
             SymmetricAlgorithm aes;
 

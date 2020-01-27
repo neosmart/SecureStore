@@ -10,7 +10,7 @@ namespace NeoSmart.SecureStore.Versioning
         public int FromVersion => 1;
         public int ToVersion => 2;
 
-        public bool Upgrade(SecretsManager sman, Vault vault)
+        public bool Upgrade(SecretsManager sman, Vault vault, string password)
         {
             // Convert JSON strings and byte arrays to plain values
 
@@ -35,7 +35,7 @@ namespace NeoSmart.SecureStore.Versioning
                 }
                 catch
                 {
-                    // (Likely) not a string/byte[], just move on
+                    throw new VaultVersionException($"Cannot upgrade secret {key}");
                 }
             }
 
