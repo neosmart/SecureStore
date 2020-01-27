@@ -39,7 +39,7 @@ namespace NeoSmart.SecureStore
         private const int KEYCOUNT = 2;
         private const int KEYLENGTH = 128 / 8;
         private const int PBKDF2ROUNDS = 256000;
-        private const int IVSIZE = 8;
+        private const int IVSIZE = 16;
 
         private Vault _vault;
         private SecureBuffer? _encryptionKey;
