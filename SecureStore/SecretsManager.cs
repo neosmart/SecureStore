@@ -8,7 +8,6 @@ using System.Threading;
 
 #if ASYNC
 using System.Threading.Tasks;
-using NeoSmart.SecureStore.Versioning;
 #endif
 
 #if NETSTANDARD1_3

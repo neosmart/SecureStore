@@ -6,25 +6,28 @@
     <RootNamespace>NeoSmart.SecureStore</RootNamespace>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageId>SecureStore</PackageId>
-    <Version>0.4.0</Version>
+    <Version>1.0.1.1</Version>
     <Authors>NeoSmart Technologies, Mahmoud Al-Qudsi</Authors>
     <Company>NeoSmart Technologies</Company>
     <Description>A simple but secure secrets manager library for .NET and .NET Core, with on-disk encrypted storage. Securely store passwords and private keys in a git-friendly, human-readable format, optimized for local development and secure remote deployment.</Description>
-    <Copyright>Copyright NeoSmart Technologies 2015 - 2019</Copyright>
-    <PackageProjectUrl>https://github.com/neosmart/SecureStore</PackageProjectUrl>
+    <PackageProjectUrl>http://neosmart.net/blog/2020/securestore-open-secrets-format/</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/neosmart/SecureStore</RepositoryUrl>
+    <Copyright>Copyright NeoSmart Technologies 2015 - 2020</Copyright>
     <RepositoryUrl>https://github.com/neosmart/SecureStore</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>secrets, encryption, secure, secrets manager, password,</PackageTags>
-    <PackageReleaseNotes>* Added option to export key as SecureBuffer in 0.3.2
-* Added LoadKey() function to load a key from a buffer in 0.3.1
-* Revamped API and more security in 0.3</PackageReleaseNotes>
-    <AssemblyVersion>0.4.0.0</AssemblyVersion>
-    <FileVersion>0.4.0.0</FileVersion>
+    <PackageReleaseNotes>Cross-platform release</PackageReleaseNotes>
+    <AssemblyVersion>1.0.1.1</AssemblyVersion>
+    <FileVersion>1.0.1.1</FileVersion>
+    <DebugSymbols>true</DebugSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
   <PropertyGroup>
     <LangVersion>8.0</LangVersion>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageIcon>SecureStore.png</PackageIcon>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TargetFramework)' != 'net40'">
@@ -46,6 +49,13 @@
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\SecureStore.png">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
   </ItemGroup>
 
 </Project>

@@ -3,19 +3,15 @@ using System.Collections.Generic;
 using System.Text;
 using System.Linq;
 using Mono.Options;
-using System.Security;
-using System.Diagnostics;
 using System.Reflection;
 using System.Text.RegularExpressions;
-using Newtonsoft.Json;
 using System.IO;
-using System.Xml;
 
 namespace NeoSmart.SecureStore.Client
 {
     static class Program
     {
-        static Assembly Assembly = typeof(Program).GetTypeInfo().Assembly;
+        static readonly Assembly Assembly = typeof(Program).GetTypeInfo().Assembly;
         static string AssemblyVersion
         {
             get

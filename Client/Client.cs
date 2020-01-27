@@ -50,7 +50,7 @@ namespace NeoSmart.SecureStore.Client
 
         public void DecryptAll(DecryptFormat format)
         {
-            //this is going to stdout out, don't bother securing the memory here
+            // This is going to stdout out, don't bother securing the memory here
             var decrypted = new Dictionary<string, dynamic>();
             foreach (var k in _sman.Keys)
             {

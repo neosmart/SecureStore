@@ -2,7 +2,7 @@
   "profiles": {
     "Client": {
       "commandName": "Project",
-      "commandLineArgs": "-s secure.json set foo bar -p password123"
+      "commandLineArgs": "create test.json"
     }
   }
 }

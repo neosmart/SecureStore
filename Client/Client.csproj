@@ -1,21 +1,53 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp2.2</TargetFramework>
+    <TargetFrameworks>netcoreapp2.2;netcoreapp3.0;netcoreapp3.1</TargetFrameworks>
     <AssemblyName>SSClient</AssemblyName>
     <LangVersion>8.0</LangVersion>
     <RootNamespace>NeoSmart.SecureStore.Client</RootNamespace>
+    <PackageId>SecureStore.Client</PackageId>
+    <Authors>Mahmoud Al-Qudsi, NeoSmart Technologies</Authors>
+    <Product>NeoSmart.SecureStore.Client</Product>
+    <Description>The CLI companion utility to NeoSmart SecureStore, for creating and managing secrets stores at the command line.</Description>
+    <Copyright>Copyright NeoSmart Technologies 2018-2020</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>http://neosmart.net/blog/2020/securestore-open-secrets-format/</PackageProjectUrl>
+    <PackageIcon>SecureStore.png</PackageIcon>
+    <PackageIconUrl />
+    <RepositoryUrl>https://github.com/neosmart/securestore</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>security, secrets, cryptography, encryption</PackageTags>
+    <PackageReleaseNotes>Official release</PackageReleaseNotes>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <StartupObject></StartupObject>
+    <Version>1.0.0</Version>
+    <DebugSymbols>true</DebugSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>SecureStore</ToolCommandName>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Mono.Options" Version="5.3.0.1" />
+    <PackageReference Include="Mono.Options" Version="6.6.0.161" />
     <PackageReference Include="System.Security.SecureString" Version="4.3.0" />
-    <PackageReference Include="System.ValueTuple" Version="4.4.0" />
+    <PackageReference Include="System.ValueTuple" Version="4.5.0" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(Configuration)'=='DEBUG'">
+    <ProjectReference Include="..\SecureStore\SecureStore.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(Configuration)'!='DEBUG'">
+    <PackageReference Include="SecureStore" Version="1.0.*" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\SecureStore\SecureStore.csproj" />
+    <None Include="..\SecureStore.png">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
   </ItemGroup>
 
 </Project>
