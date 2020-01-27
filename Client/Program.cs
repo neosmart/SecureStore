@@ -252,6 +252,14 @@ namespace NeoSmart.SecureStore.Client
                 //     Help(Console.Error, "Invalid arguments!", command, parseOptions);
                 // }
 
+                if (path is null)
+                {
+                    // Help(Console.Error, "A path to the secrets store is required!", command, parseOptions);
+
+                    // Default to secrets.json rather than error out
+                    path = "secrets.json";
+                }
+
                 if (string.IsNullOrWhiteSpace(path))
                 {
                     Help(Console.Error, "A path to the secrets store is required!", command, parseOptions);
@@ -259,7 +267,10 @@ namespace NeoSmart.SecureStore.Client
 
                 if (keyfile == null && password == null)
                 {
-                    Help(Console.Error, "Must specify either --password or --keyfile!", command, parseOptions);
+                    // Help(Console.Error, "Must specify either --password or --keyfile!", command, parseOptions);
+
+                    // Default to password mode instead of erroring out
+                    password = string.Empty;
                 }
 
                 // We need to differentiate between null (not set) and empty (empty)
