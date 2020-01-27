@@ -24,19 +24,8 @@ namespace NeoSmart.SecureStore.Client
             if (_sman.TryGetBytes(key, out var buffer))
             {
             }
-            // Manually attempt to handle a few particular types
-            if (!value.StartsWith("0") && int.TryParse(value, out var intValue))
-            {
-                _sman.Set(key, intValue);
-            }
-            else if (bool.TryParse(value, out var boolValue))
-            {
-                _sman.Set(key, boolValue ? 1 : 0);
-            }
-            else
-            {
-                _sman.Set(key, value);
-            }
+
+            _sman.Set(key, value);
         }
 
         public void Delete(string key)
