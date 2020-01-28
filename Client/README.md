@@ -202,7 +202,7 @@ secretKey: secretValue
 
 SecureStore was written by Mahmoud Al-Qudsi <mqudsi@neosmart.net> and is developed and maintained by
 NeoSmart Technologies. SecureStore and SecureStore.NET are copyrights of NeoSmart Technologies, 2015
-- 2020.
+\- 2020.
 
 SecureStore is released to the general public under the terms of the open source MIT License in the
 hopes that it may be useful but without any warranty.
