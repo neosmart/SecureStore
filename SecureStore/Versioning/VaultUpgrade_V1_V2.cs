@@ -14,6 +14,7 @@ namespace NeoSmart.SecureStore.Versioning
         {
             // Convert JSON strings and byte arrays to plain values
 
+            var jsonSettings = SecretsManager.DefaultJsonSettings;
             foreach (var key in new List<string>(sman.Keys))
             {
                 sman.DefaultSerializer = new Utf8JsonSerializer();
@@ -22,7 +23,7 @@ namespace NeoSmart.SecureStore.Versioning
                 try
                 {
                     var s = Encoding.UTF8.GetString(bytes);
-                    var o = JsonConvert.DeserializeObject(s);
+                    var o = JsonConvert.DeserializeObject(s, jsonSettings);
 
                     if (o is string stringValue)
                     {

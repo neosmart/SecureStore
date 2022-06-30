@@ -63,6 +63,17 @@ namespace NeoSmart.SecureStore
         public ISecretSerializer DefaultSerializer { get; set; } = new Serializers.Utf8JsonSerializer();
 #endif
 
+        /// <summary>
+        /// A <c>JsonSerializerSettings</c> instance that must be used (at least) for all deserialization
+        /// calls as it addresses a known security issue in Newtonsoft.Json
+        /// </summary>
+        internal static JsonSerializerSettings DefaultJsonSettings => new JsonSerializerSettings()
+        {
+            // Guard against GHSA-5crp-9r3c-p9vr
+            // See https://github.com/advisories/GHSA-5crp-9r3c-p9vr
+            MaxDepth = 128,
+        };
+
         private SecretsManager()
         {
         }
@@ -353,7 +364,7 @@ namespace NeoSmart.SecureStore
             using (var reader = new StreamReader(stream, DefaultEncoding))
             using (var jreader = new JsonTextReader(reader))
             {
-                _vault = JsonSerializer.Create().Deserialize<VaultLoader>(jreader);
+                _vault = JsonSerializer.Create(DefaultJsonSettings).Deserialize<VaultLoader>(jreader);
                 if (_vault.VaultVersion > Vault.SCHEMAVERSION)
                 {
                     throw Versioning.VaultVersionException.UnsupportedVersion();
@@ -561,7 +572,7 @@ namespace NeoSmart.SecureStore
             using (var jwriter = new JsonTextWriter(writer))
             {
                 jwriter.Formatting = Formatting.Indented;
-                JsonSerializer.Create().Serialize(jwriter, _vault);
+                JsonSerializer.Create(DefaultJsonSettings).Serialize(jwriter, _vault);
             }
         }
 

@@ -10,6 +10,7 @@ namespace NeoSmart.SecureStore
 
     namespace Serializers
     {
+        // This class is used by VaultUpgrade_V1_V2 even if JSON_SERIALIZER is not defined.
         class Utf8JsonSerializer : ISecretSerializer
         {
             public SecureBuffer Serialize<T>(T @object)
