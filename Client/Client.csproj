@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFrameworks>netcoreapp2.2;netcoreapp3.0;netcoreapp3.1</TargetFrameworks>
+    <TargetFrameworks>net6.0</TargetFrameworks>
     <AssemblyName>SSClient</AssemblyName>
     <LangVersion>8.0</LangVersion>
     <RootNamespace>NeoSmart.SecureStore.Client</RootNamespace>

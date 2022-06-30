@@ -3,16 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
-using Newtonsoft.Json;
-using System.Threading;
-
-#if ASYNC
 using System.Threading.Tasks;
-#endif
+using Newtonsoft.Json;
 
-#if NETSTANDARD1_3
-using Microsoft.AspNetCore.Cryptography.KeyDerivation;
-#endif
 
 namespace NeoSmart.SecureStore
 {
@@ -25,14 +18,6 @@ namespace NeoSmart.SecureStore
         /// some point in the future close to version 1.0)
         /// </summary>
         public static Versioning.VaultVersionPolicy VaultVersionPolicy { get; set; } = Versioning.VaultVersionPolicy.Upgrade;
-
-        internal static ThreadLocal<RandomNumberGenerator> SecureRng = new ThreadLocal<RandomNumberGenerator> (() =>
-#if NETSTANDARD1_3 || NETSTANDARD2_0 || NETCOREAPP3_0
-            RandomNumberGenerator.Create()
-#else
-            new RNGCryptoServiceProvider()
-#endif
-        );
 
         internal static Encoding DefaultEncoding { get; } = new UTF8Encoding(false);
 
@@ -50,12 +35,11 @@ namespace NeoSmart.SecureStore
         public delegate SecureBuffer SerializeFunc<T>(T value);
         public delegate T DeserializeFunc<T>(SecureBuffer serialized);
         public delegate bool TryDeserializeFunc<T>(SecureBuffer serialized, out T deserialized);
-        public delegate void ByteReceiver(byte[] bytes);
 
         /// <summary>
         /// The vault has been upgraded to a new schema version. Changes should be saved to disk.
         /// </summary>
-        public bool StoreUpgraded { get; set; } = false;
+        public bool StoreUpgraded { get; internal set; } = false;
 
 #if !JSON_SERIALIZER
         public ISecretSerializer DefaultSerializer { get; set; } = null;
@@ -101,7 +85,12 @@ namespace NeoSmart.SecureStore
 
         internal static void GenerateBytes(byte[] buffer)
         {
-            SecureRng.Value.GetBytes(buffer);
+#if NET6_0_OR_GREATER
+            RandomNumberGenerator.Fill(buffer);
+#else
+            using var rng = RandomNumberGenerator.Create();
+            rng.GetBytes(buffer);
+#endif
         }
 
         // Generate a new key for a new store
@@ -158,7 +147,6 @@ namespace NeoSmart.SecureStore
             CheckUpgrade();
         }
 
-#if ASYNC
         public async Task LoadKeyFromFileAsync(string path)
         {
             if (_encryptionKey != null)
@@ -197,7 +185,6 @@ namespace NeoSmart.SecureStore
 
             CheckUpgrade();
         }
-#endif
 
         public void ExportKey(string path)
         {
@@ -215,7 +202,6 @@ namespace NeoSmart.SecureStore
             }
         }
 
-#if ASYNC
         public async Task ExportKeyAsync(string path)
         {
             if (_encryptionKey?.Buffer == null || _hmacKey?.Buffer == null)
@@ -231,7 +217,6 @@ namespace NeoSmart.SecureStore
                 await file.WriteAsync(_hmacKey?.Buffer, 0, KEYLENGTH);
             }
         }
-#endif
 
         public SecureBuffer ExportKey()
         {
@@ -252,16 +237,10 @@ namespace NeoSmart.SecureStore
 
         static internal byte[] DerivePassword(string password, byte[] salt, int rounds = PBKDF2ROUNDS)
         {
-#if NETSTANDARD1_3
-            return KeyDerivation.Pbkdf2(password, salt, KeyDerivationPrf.HMACSHA1, rounds, KEYLENGTH * KEYCOUNT);
-#elif NET20 || NET30 || NET35
-            return new Rfc2898DeriveBytes(password, salt, rounds).GetBytes(KEYLENGTH * KEYCOUNT);
-#else
             using (var pbkdf2 = new Rfc2898DeriveBytes(password, salt, rounds))
             {
                 return pbkdf2.GetBytes(KEYLENGTH * KEYCOUNT);
             }
-#endif
         }
 
         internal void SplitAndLoadKey(byte[] insecure)
@@ -378,7 +357,7 @@ namespace NeoSmart.SecureStore
 
         private void CheckUpgrade(string password = null)
         {
-            if (_vaultUpgradePending && _vault != null && _encryptionKey != null)
+            if (_vaultUpgradePending && _vault is not null && _encryptionKey is not null)
             {
                 var upgrade = new Versioning.VaultUpgrade();
                 upgrade.Upgrade(this, _vault, password);
@@ -411,11 +390,7 @@ namespace NeoSmart.SecureStore
             return true;
         }
 
-#if ASYNC
         public bool TryGetBytes(string key, Action<byte[]> receiver)
-#else
-        public bool TryGetBytes(string key, ByteReceiver receiver)
-#endif
         {
             if (!_vault.Data.ContainsKey(key))
             {
@@ -582,16 +557,7 @@ namespace NeoSmart.SecureStore
         {
             EncryptedBlob blob;
 
-            SymmetricAlgorithm aes;
-#if NETSTANDARD1_3 || NETSTANDARD2_0 || NETCOREAPP3_0
-            aes = Aes.Create();
-#elif NET20 || NET30
-            aes = Rijndael.Create();
-#else
-            aes = new AesCryptoServiceProvider();
-#endif
-
-            using (aes)
+            using (var aes = Aes.Create())
             {
                 aes.Mode = CipherMode.CBC;
                 aes.Key = _encryptionKey?.Buffer;
@@ -613,27 +579,13 @@ namespace NeoSmart.SecureStore
 
         private byte[] Authenticate(byte[] iv, byte[] encrypted)
         {
-#if NETSTANDARD1_3 || NETSTANDARD2_0 || NETCOREAPP3_0
-            var hmac = new HMACSHA1(_hmacKey?.Buffer);
-            var composite = new byte[iv.Length + encrypted.Length];
-            Array.Copy(iv, 0, composite, 0, iv.Length);
-            Array.Copy(encrypted, 0, composite, iv.Length, encrypted.Length);
-            var result = hmac.ComputeHash(composite);
-#else
-            var hmac = HMACSHA1.Create();
+            using var hmac = HMAC.Create("HMACSHA1");
             hmac.Key = _hmacKey?.Buffer;
 
             hmac.TransformBlock(iv, 0, iv.Length, iv, 0);
             hmac.TransformFinalBlock(encrypted, 0, encrypted.Length);
 
-            var result = hmac.Hash;
-#endif
-
-#if !NET20 && !NET30 && !NET35
-            hmac.Dispose();
-#endif
-
-            return result;
+            return hmac.Hash;
         }
 
         internal SecureBuffer Decrypt(EncryptedBlob blob)
@@ -657,27 +609,16 @@ namespace NeoSmart.SecureStore
                 throw new TamperedCipherTextException();
             }
 
-            SymmetricAlgorithm aes;
-#if NETSTANDARD1_3 || NETSTANDARD2_0 || NETCOREAPP3_0
-            aes = Aes.Create();
-#elif NET20 || NET30
-            aes = Rijndael.Create();
-#else
-            aes = new AesCryptoServiceProvider();
-#endif
+            using var aes = Aes.Create();
+            aes.Mode = CipherMode.CBC;
+            aes.Key = _encryptionKey?.Buffer;
+            aes.BlockSize = 128;
+            aes.IV = blob.IV;
 
-            using (aes)
+            using (var decryptor = aes.CreateDecryptor())
             {
-                aes.Mode = CipherMode.CBC;
-                aes.Key = _encryptionKey?.Buffer;
-                aes.BlockSize = 128;
-                aes.IV = blob.IV;
-
-                using (var decryptor = aes.CreateDecryptor())
-                {
-                    var unsecured = decryptor.TransformFinalBlock(blob.Payload, 0, blob.Payload.Length);
-                    return new SecureBuffer(unsecured);
-                }
+                var unsecured = decryptor.TransformFinalBlock(blob.Payload, 0, blob.Payload.Length);
+                return new SecureBuffer(unsecured);
             }
         }
 
@@ -688,7 +629,7 @@ namespace NeoSmart.SecureStore
             _encryptionKey = null;
         }
 
-        #region Obsolete
+#region Obsolete
         [Obsolete("Use SecretsManager.TryGetValue(..) instead.")]
         public bool TryRetrieve<T>(string key, out T value)
         {
@@ -705,6 +646,6 @@ namespace NeoSmart.SecureStore
 
             return result;
         }
-        #endregion
+#endregion
     }
 }
