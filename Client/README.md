@@ -37,8 +37,8 @@ client, after which it may be run by executing `SecureStore` in your terminal/sh
 The application may be executed in your terminal by running `SecureStore.exe`:
 
 ```
-ssclient 1.0.3 - SecureStore secrets manager client
-Copyright NeoSmart Technologies 2017-2020 - https://github.com/neosmart/SecureStore/
+ssclient 1.1.1 - SecureStore secrets manager client
+Copyright NeoSmart Technologies 2017-2022 - https://github.com/neosmart/SecureStore/
 
 Usage: ssclient [FLAGS] [create|set|get|delete] OPTIONS
         -h  --help      Show this help message and exit
@@ -202,7 +202,7 @@ secretKey: secretValue
 
 SecureStore was written by Mahmoud Al-Qudsi <mqudsi@neosmart.net> and is developed and maintained by
 NeoSmart Technologies. SecureStore and SecureStore.NET are copyrights of NeoSmart Technologies, 2015
-\- 2020.
+\- 2022.
 
 SecureStore is released to the general public under the terms of the open source MIT License in the
 hopes that it may be useful but without any warranty.

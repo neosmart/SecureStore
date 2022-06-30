@@ -144,7 +144,7 @@ namespace NeoSmart.SecureStore.Client
             void printVersion()
             {
                 Console.Out.WriteLine($"ssclient {AssemblyVersion} - SecureStore secrets manager client");
-                Console.Out.WriteLine("Copyright NeoSmart Technologies 2017-2020 - https://github.com/neosmart/SecureStore/");
+                Console.Out.WriteLine("Copyright NeoSmart Technologies 2017-2022 - https://github.com/neosmart/SecureStore/");
             }
 
             if (help)

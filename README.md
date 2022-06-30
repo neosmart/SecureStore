@@ -145,4 +145,4 @@ and
 
 ## License and Copyright
 
-SecureStore for .NET is written and developed by Mahmoud Al-Qudsi of NeoSmart Technologies. SecureStore is released to the general public under the terms of the open source MIT license, and all rights not assigned are reserved to NeoSmart Technologies. The names `SecureStore` and `SecureStore.NET` are copyright NeoSmart Technologies 2015 - 2020.
+SecureStore for .NET is written and developed by Mahmoud Al-Qudsi of NeoSmart Technologies. SecureStore is released to the general public under the terms of the open source MIT license, and all rights not assigned are reserved to NeoSmart Technologies. The names `SecureStore` and `SecureStore.NET` are copyright NeoSmart Technologies 2015 - 2022.
