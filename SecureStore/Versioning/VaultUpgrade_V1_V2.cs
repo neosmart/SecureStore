@@ -33,6 +33,12 @@ namespace NeoSmart.SecureStore.Versioning
                     {
                         sman.Set(key, byteValue);
                     }
+#if JSON_SERIALIZER
+                    else
+                    {
+                        sman.Set(key, s);
+                    }
+#endif
                 }
                 catch
                 {
