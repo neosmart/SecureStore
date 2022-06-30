@@ -4,8 +4,8 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using NeoSmart.SecureStore.Versioning;
 using Newtonsoft.Json;
-
 
 namespace NeoSmart.SecureStore
 {
@@ -14,10 +14,12 @@ namespace NeoSmart.SecureStore
         /// <summary>
         /// Determines runtime behavior when older schema versions are loaded.
         ///
-        /// (This will likely default to <see cref="Versioning.VaultVersionPolicy.Strict"/> at
-        /// some point in the future close to version 1.0)
+        /// This defaults to <see cref="VaultVersionPolicy.Strict" /> in the library and is
+        /// overridden to <see cref="VaultVersionPolicy.Upgrade"/> in the companion CLI app
+        /// to allow for development/deployment-time upgrades across major vault versions (which may risk
+        /// version downgrade attacks) but protects against them in-prod.
         /// </summary>
-        public static Versioning.VaultVersionPolicy VaultVersionPolicy { get; set; } = Versioning.VaultVersionPolicy.Upgrade;
+        public static VaultVersionPolicy VaultVersionPolicy { get; set; } = VaultVersionPolicy.Strict;
 
         internal static Encoding DefaultEncoding { get; } = new UTF8Encoding(false);
 
@@ -346,7 +348,7 @@ namespace NeoSmart.SecureStore
                 _vault = JsonSerializer.Create(DefaultJsonSettings).Deserialize<VaultLoader>(jreader);
                 if (_vault.VaultVersion > Vault.SCHEMAVERSION)
                 {
-                    throw Versioning.VaultVersionException.UnsupportedVersion();
+                    throw VaultVersionException.UnsupportedVersion();
                 }
                 if (_vault.VaultVersion != Vault.SCHEMAVERSION)
                 {
@@ -359,7 +361,12 @@ namespace NeoSmart.SecureStore
         {
             if (_vaultUpgradePending && _vault is not null && _encryptionKey is not null)
             {
-                var upgrade = new Versioning.VaultUpgrade();
+                if (VaultVersionPolicy == VaultVersionPolicy.Strict)
+                {
+                    throw new VaultVersionException($"Current {VaultVersionPolicy} forbids use of older vault versions! " +
+                        $"Upgrade the vault (via the SecureStore cli or api) and then re-deploy the upgraded secrets file.");
+                }
+                var upgrade = new VaultUpgrade();
                 upgrade.Upgrade(this, _vault, password);
                 StoreUpgraded = true;
             }

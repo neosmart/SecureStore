@@ -56,6 +56,11 @@ namespace NeoSmart.SecureStore.Client
 
         static void Main(string[] mainArgs)
         {
+            // Tweak the default VaultVersionPolicy to allow upgrades when the CLI is used to interface
+            // with the vault (by default, silent upgrades across major vault versions are prohibited to
+            // protect against schema downgrade attacks).
+            SecretsManager.VaultVersionPolicy = Versioning.VaultVersionPolicy.Upgrade;
+
             var args = new List<string>(mainArgs);
 
             bool help = false;
