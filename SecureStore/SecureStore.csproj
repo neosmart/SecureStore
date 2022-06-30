@@ -6,19 +6,17 @@
     <RootNamespace>NeoSmart.SecureStore</RootNamespace>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageId>SecureStore</PackageId>
-    <Version>1.0.3</Version>
+    <Version>1.1.0</Version>
     <Authors>NeoSmart Technologies, Mahmoud Al-Qudsi</Authors>
     <Company>NeoSmart Technologies</Company>
     <Description>A simple but secure secrets manager library for .NET and .NET Core, with on-disk encrypted storage. Securely store passwords and private keys in a git-friendly, human-readable format, optimized for local development and secure remote deployment.</Description>
     <PackageProjectUrl>http://neosmart.net/blog/2020/securestore-open-secrets-format/</PackageProjectUrl>
     <RepositoryUrl>https://github.com/neosmart/SecureStore</RepositoryUrl>
-    <Copyright>Copyright NeoSmart Technologies 2015 - 2020</Copyright>
+    <Copyright>Copyright NeoSmart Technologies 2015 - 2022</Copyright>
     <RepositoryUrl>https://github.com/neosmart/SecureStore</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>secrets, encryption, secure, secrets manager, password,</PackageTags>
     <PackageReleaseNotes>Cross-platform release</PackageReleaseNotes>
-    <AssemblyVersion>1.0.3.0</AssemblyVersion>
-    <FileVersion>1.0.3.0</FileVersion>
     <DebugSymbols>true</DebugSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
