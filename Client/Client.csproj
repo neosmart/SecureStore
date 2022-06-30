@@ -22,7 +22,8 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <StartupObject></StartupObject>
-    <Version>1.1.0</Version>
+    <!-- Remember to update the SecureStore dependency version below if needed! -->
+    <Version>1.1.1</Version>
     <DebugSymbols>true</DebugSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <PackAsTool>true</PackAsTool>
@@ -40,7 +41,7 @@
   </ItemGroup>
 
   <ItemGroup Condition="'$(Configuration)'!='DEBUG'">
-    <PackageReference Include="SecureStore" Version="1.0.3" />
+    <PackageReference Include="SecureStore" Version="1.1.0" />
   </ItemGroup>
 
   <ItemGroup>
