@@ -571,12 +571,13 @@ namespace NeoSmart.SecureStore
         {
             EncryptedBlob blob;
 
+            SymmetricAlgorithm aes;
 #if NETSTANDARD1_3 || NETSTANDARD2_0 || NETCOREAPP3_0
-            var aes = Aes.Create();
+            aes = Aes.Create();
 #elif NET20 || NET30
-            var aes = Rijndael.Create();
+            aes = Rijndael.Create();
 #else
-            var aes = new AesCryptoServiceProvider();
+            aes = new AesCryptoServiceProvider();
 #endif
 
             using (aes)
@@ -626,16 +627,6 @@ namespace NeoSmart.SecureStore
 
         internal SecureBuffer Decrypt(EncryptedBlob blob)
         {
-            SymmetricAlgorithm aes;
-
-#if NETSTANDARD1_3 || NETSTANDARD2_0 || NETCOREAPP3_0
-            aes = Aes.Create();
-#elif NET20 || NET30
-            aes = Rijndael.Create();
-#else
-            aes = new AesCryptoServiceProvider();
-#endif
-
             // Validate the HMAC
             var calculatedHmac = Authenticate(blob.IV, blob.Payload);
 
@@ -654,6 +645,15 @@ namespace NeoSmart.SecureStore
             {
                 throw new TamperedCipherTextException();
             }
+
+            SymmetricAlgorithm aes;
+#if NETSTANDARD1_3 || NETSTANDARD2_0 || NETCOREAPP3_0
+            aes = Aes.Create();
+#elif NET20 || NET30
+            aes = Rijndael.Create();
+#else
+            aes = new AesCryptoServiceProvider();
+#endif
 
             using (aes)
             {
