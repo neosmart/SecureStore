@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using NeoSmart.SecureStore.Versioning;
 using Newtonsoft.Json;
@@ -166,7 +167,7 @@ namespace NeoSmart.SecureStore
             CheckUpgrade();
         }
 
-        public async Task LoadKeyFromFileAsync(string path)
+        public async Task LoadKeyFromFileAsync(string path, CancellationToken cancel = default)
         {
             if (_encryptionKey != null)
             {
@@ -182,11 +183,11 @@ namespace NeoSmart.SecureStore
                     throw new InvalidKeyFileException();
                 }
 
-                await LoadKeyFromStreamAsync(file);
+                await LoadKeyFromStreamAsync(file, cancel);
             }
         }
 
-        public async Task LoadKeyFromStreamAsync(Stream stream)
+        public async Task LoadKeyFromStreamAsync(Stream stream, CancellationToken cancel = default)
         {
             if (_encryptionKey != null)
             {
@@ -205,7 +206,7 @@ namespace NeoSmart.SecureStore
                     int bytesRead = -1;
                     while (bytesRead != 0)
                     {
-                        bytesRead = await stream.ReadAsync(buffer, offset, KEYLENGTH - offset);
+                        bytesRead = await stream.ReadAsync(buffer, offset, KEYLENGTH - offset, cancel);
                         offset += bytesRead;
                     }
 
@@ -241,7 +242,7 @@ namespace NeoSmart.SecureStore
             }
         }
 
-        public async Task ExportKeyAsync(string path)
+        public async Task ExportKeyAsync(string path, CancellationToken cancel = default)
         {
             if (_encryptionKey?.Buffer == null || _hmacKey?.Buffer == null)
             {
@@ -252,8 +253,9 @@ namespace NeoSmart.SecureStore
             // Avoid excess buffering where possible, even if it's slower.
             using (var file = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough | FileOptions.Asynchronous))
             {
-                await file.WriteAsync(_encryptionKey?.Buffer, 0, KEYLENGTH);
-                await file.WriteAsync(_hmacKey?.Buffer, 0, KEYLENGTH);
+                await file.WriteAsync(_encryptionKey?.Buffer, 0, KEYLENGTH, cancel);
+                await file.WriteAsync(_hmacKey?.Buffer, 0, KEYLENGTH, cancel);
+                await file.FlushAsync(cancel);
             }
         }
 
