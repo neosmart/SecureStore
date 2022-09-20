@@ -126,24 +126,41 @@ namespace NeoSmart.SecureStore
                     throw new InvalidKeyFileException();
                 }
 
-                _encryptionKey = new SecureBuffer(KEYLENGTH);
-                _hmacKey = new SecureBuffer(KEYLENGTH);
+                LoadKeyFromStream(file);
+            }
+        }
 
-                foreach (var buffer in new[] { _encryptionKey?.Buffer, _hmacKey?.Buffer })
+        // Load an encryption key from a file
+        public void LoadKeyFromStream(Stream stream)
+        {
+            if (_encryptionKey != null)
+            {
+                throw new KeyAlreadyLoadedException();
+            }
+
+            _encryptionKey = new SecureBuffer(KEYLENGTH);
+            _hmacKey = new SecureBuffer(KEYLENGTH);
+
+            foreach (var buffer in new[] { _encryptionKey?.Buffer, _hmacKey?.Buffer })
+            {
+                int offset = 0;
+                int bytesRead = -1;
+                while (bytesRead != 0)
                 {
-                    int offset = 0;
-                    int bytesRead = -1;
-                    while (bytesRead != 0)
-                    {
-                        bytesRead = file.Read(buffer, offset, KEYLENGTH - offset);
-                        offset += bytesRead;
-                    }
-
-                    if (offset != KEYLENGTH)
-                    {
-                        throw new IOException("Error reading key from file!");
-                    }
+                    bytesRead = stream.Read(buffer, offset, KEYLENGTH - offset);
+                    offset += bytesRead;
                 }
+
+                if (offset != KEYLENGTH)
+                {
+                    throw new IOException("Error reading key from file!");
+                }
+            }
+
+            // Validate that we have exhausted the key source
+            if (stream.ReadByte() != -1)
+            {
+                throw new InvalidKeyFileException("The key file is longer than expected!");
             }
 
             CheckUpgrade();
@@ -165,6 +182,20 @@ namespace NeoSmart.SecureStore
                     throw new InvalidKeyFileException();
                 }
 
+                await LoadKeyFromStreamAsync(file);
+            }
+        }
+
+        public async Task LoadKeyFromStreamAsync(Stream stream)
+        {
+            if (_encryptionKey != null)
+            {
+                throw new KeyAlreadyLoadedException();
+            }
+
+            // We don't know how .NET buffers things in memory, so we write it ourselves for maximum security.
+            // Avoid excess buffering where possible, even if it's slower.
+            {
                 _encryptionKey = new SecureBuffer(KEYLENGTH);
                 _hmacKey = new SecureBuffer(KEYLENGTH);
 
@@ -174,7 +205,7 @@ namespace NeoSmart.SecureStore
                     int bytesRead = -1;
                     while (bytesRead != 0)
                     {
-                        bytesRead = await file.ReadAsync(buffer, offset, KEYLENGTH - offset);
+                        bytesRead = await stream.ReadAsync(buffer, offset, KEYLENGTH - offset);
                         offset += bytesRead;
                     }
 
@@ -182,6 +213,12 @@ namespace NeoSmart.SecureStore
                     {
                         throw new IOException("Error reading key from file!");
                     }
+                }
+
+                // Verify that the stream does not contain any more bytes
+                if (stream.ReadByte() != -1)
+                {
+                    throw new InvalidKeyFileException("The key file is longer than expected");
                 }
             }
 
