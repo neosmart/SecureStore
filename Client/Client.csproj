@@ -4,7 +4,8 @@
     <OutputType>Exe</OutputType>
     <TargetFrameworks>net6.0</TargetFrameworks>
     <AssemblyName>SSClient</AssemblyName>
-    <LangVersion>8.0</LangVersion>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>enable</Nullable>
     <RootNamespace>NeoSmart.SecureStore.Client</RootNamespace>
     <PackageId>SecureStore.Client</PackageId>
     <Authors>Mahmoud Al-Qudsi, NeoSmart Technologies</Authors>
