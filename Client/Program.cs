@@ -327,7 +327,7 @@ namespace NeoSmart.SecureStore.Client
                     if (!decryptAll && bareArguments.Count != 1)
                     {
                         Console.Error.WriteLine("Expected the name of a single secret to look up or delete!");
-                        Environment.Exit(1);
+                        throw new ExitCodeException(1);
                     }
                     else if (!decryptAll)
                     {
