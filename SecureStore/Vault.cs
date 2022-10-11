@@ -58,7 +58,9 @@ namespace NeoSmart.SecureStore
         /// This constructor is only intended for use by the serialization library.
         /// </summary>
         [EditorBrowsable(EditorBrowsableState.Never)]
+#pragma warning disable CS8618
         protected Vault()
+#pragma warning restore CS8618
         {
         }
     }

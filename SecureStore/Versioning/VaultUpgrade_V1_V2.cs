@@ -10,7 +10,7 @@ namespace NeoSmart.SecureStore.Versioning
         public int FromVersion => 1;
         public int ToVersion => 2;
 
-        public bool Upgrade(SecretsManager sman, Vault vault, string password)
+        public bool Upgrade(SecretsManager sman, Vault vault, string? password)
         {
             // Convert JSON strings and byte arrays to plain values
 
@@ -18,11 +18,11 @@ namespace NeoSmart.SecureStore.Versioning
             foreach (var key in new List<string>(sman.Keys))
             {
                 sman.DefaultSerializer = new Utf8JsonSerializer();
-                sman.TryGetValue(key, out byte[] bytes);
+                sman.TryGetValue(key, out byte[]? bytes);
 
                 try
                 {
-                    var s = Encoding.UTF8.GetString(bytes);
+                    var s = Encoding.UTF8.GetString(bytes!);
                     var o = JsonConvert.DeserializeObject(s, jsonSettings);
 
                     if (o is string stringValue)

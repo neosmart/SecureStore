@@ -4,14 +4,14 @@ namespace NeoSmart.SecureStore
 {
     public class SecretsException : Exception
     {
-        public SecretsException(string message = null) : base(message)
+        public SecretsException(string? message = null) : base(message)
         {
         }
     }
 
     public class NoKeyLoadedException : SecretsException
     {
-        public NoKeyLoadedException(string message) : base(message)
+        public NoKeyLoadedException(string? message) : base(message)
         {
         }
 
@@ -22,7 +22,7 @@ namespace NeoSmart.SecureStore
 
     public class KeyAlreadyLoadedException : SecretsException
     {
-        public KeyAlreadyLoadedException(string message) : base(message)
+        public KeyAlreadyLoadedException(string? message) : base(message)
         {
         }
 
@@ -33,7 +33,7 @@ namespace NeoSmart.SecureStore
 
     public class InvalidKeyFileException : SecretsException
     {
-        public InvalidKeyFileException(string message) : base(message)
+        public InvalidKeyFileException(string? message) : base(message)
         {
         }
 
@@ -44,7 +44,7 @@ namespace NeoSmart.SecureStore
 
     public class TamperedCipherTextException : SecretsException
     {
-        public TamperedCipherTextException(string message) : base(message)
+        public TamperedCipherTextException(string? message) : base(message)
         {
         }
 

@@ -7,7 +7,7 @@ namespace NeoSmart.SecureStore.Versioning
         public int FromVersion => 2;
         public int ToVersion => 3;
 
-        public bool Upgrade(SecretsManager sman, Vault vault, string password)
+        public bool Upgrade(SecretsManager sman, Vault vault, string? password)
         {
             // Upgrade from 10,000 PBKDF2 rounds to 256,000 PBKDF2 rounds
             if (password is null)

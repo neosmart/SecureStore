@@ -38,7 +38,7 @@ namespace NeoSmart.SecureStore.Client
 
         public void Decrypt(string key)
         {
-            if (!_sman.TryGetValue(key, out string retrieved))
+            if (!_sman.TryGetValue(key, out string? retrieved))
             {
                 throw new ExitCodeException(1, $"Key \"{key}\" not found in secrets store!");
             }

@@ -24,7 +24,7 @@ namespace NeoSmart.SecureStore.Client
             get
             {
                 var regex = new Regex("Version=(.*?),");
-                var fullVersion = regex.Match(Assembly.FullName).Groups[1].Value;
+                var fullVersion = regex.Match(Assembly.FullName!).Groups[1].Value;
                 while (fullVersion.EndsWith(".0") && fullVersion.Length > "1.0".Length)
                 {
                     fullVersion = fullVersion.Substring(0, fullVersion.Length - 2);
@@ -459,6 +459,8 @@ namespace NeoSmart.SecureStore.Client
                         }
                         if (password == null)
                         {
+                            ExitIfNullOrEmpty(keyfile, "A keyfile path is required if no password is provided");
+
                             if (File.Exists(keyfile) && new FileInfo(keyfile).Length > 0)
                             {
                                 sman.LoadKeyFromFile(keyfile);

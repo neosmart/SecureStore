@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <!-- netstandard2.0 is required for UWP support -->
@@ -20,6 +20,7 @@
     <PackageReleaseNotes>Cross-platform release</PackageReleaseNotes>
     <DebugSymbols>true</DebugSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <PropertyGroup>

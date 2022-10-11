@@ -51,7 +51,7 @@ namespace NeoSmart.SecureStore.Versioning
         int FromVersion { get; }
         int ToVersion { get; }
 
-        bool Upgrade(SecretsManager sman, Vault vault, string password);
+        bool Upgrade(SecretsManager sman, Vault vault, string? password);
     }
 
     internal class VaultUpgrade
@@ -64,7 +64,7 @@ namespace NeoSmart.SecureStore.Versioning
             _upgradeMap.Add(2, new VaultUpgrade_V2_V3());
         }
 
-        public void Upgrade(SecretsManager sman, Vault vault, string password)
+        public void Upgrade(SecretsManager sman, Vault vault, string? password)
         {
             while (vault.VaultVersion != Vault.SCHEMAVERSION)
             {

@@ -29,7 +29,7 @@ namespace NeoSmart.SecureStore
         private const int PBKDF2ROUNDS = 256000;
         private const int IVSIZE = 16;
 
-        private Vault _vault;
+        private Vault _vault = null!;
         private SecureBuffer? _encryptionKey;
         private SecureBuffer? _hmacKey;
         private bool _vaultUpgradePending = false;
@@ -45,9 +45,9 @@ namespace NeoSmart.SecureStore
         public bool StoreUpgraded { get; internal set; } = false;
 
 #if !JSON_SERIALIZER
-        public ISecretSerializer DefaultSerializer { get; set; } = null;
+        public ISecretSerializer? DefaultSerializer { get; set; } = null;
 #else
-        public ISecretSerializer DefaultSerializer { get; set; } = new Serializers.Utf8JsonSerializer();
+        public ISecretSerializer? DefaultSerializer { get; set; } = new Serializers.Utf8JsonSerializer();
 #endif
 
         /// <summary>
@@ -105,9 +105,9 @@ namespace NeoSmart.SecureStore
             }
 
             _encryptionKey = new SecureBuffer(KEYLENGTH);
-            GenerateBytes(_encryptionKey?.Buffer);
+            GenerateBytes(_encryptionKey.Value.Buffer);
             _hmacKey = new SecureBuffer(KEYLENGTH);
-            GenerateBytes(_hmacKey?.Buffer);
+            GenerateBytes(_hmacKey.Value.Buffer);
         }
 
         // Load an encryption key from a file
@@ -142,7 +142,7 @@ namespace NeoSmart.SecureStore
             _encryptionKey = new SecureBuffer(KEYLENGTH);
             _hmacKey = new SecureBuffer(KEYLENGTH);
 
-            foreach (var buffer in new[] { _encryptionKey?.Buffer, _hmacKey?.Buffer })
+            foreach (var buffer in new[] { _encryptionKey.Value.Buffer, _hmacKey.Value.Buffer })
             {
                 int offset = 0;
                 int bytesRead = -1;
@@ -200,7 +200,7 @@ namespace NeoSmart.SecureStore
                 _encryptionKey = new SecureBuffer(KEYLENGTH);
                 _hmacKey = new SecureBuffer(KEYLENGTH);
 
-                foreach (var buffer in new[] { _encryptionKey?.Buffer, _hmacKey?.Buffer })
+                foreach (var buffer in new[] { _encryptionKey.Value.Buffer, _hmacKey.Value.Buffer })
                 {
                     int offset = 0;
                     int bytesRead = -1;
@@ -237,8 +237,8 @@ namespace NeoSmart.SecureStore
             // Avoid excess buffering where possible, even if it's slower.
             using (var file = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough))
             {
-                file.Write(_encryptionKey?.Buffer, 0, KEYLENGTH);
-                file.Write(_hmacKey?.Buffer, 0, KEYLENGTH);
+                file.Write(_encryptionKey.Value.Buffer, 0, KEYLENGTH);
+                file.Write(_hmacKey.Value.Buffer, 0, KEYLENGTH);
             }
         }
 
@@ -253,8 +253,8 @@ namespace NeoSmart.SecureStore
             // Avoid excess buffering where possible, even if it's slower.
             using (var file = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough | FileOptions.Asynchronous))
             {
-                await file.WriteAsync(_encryptionKey?.Buffer, 0, KEYLENGTH, cancel);
-                await file.WriteAsync(_hmacKey?.Buffer, 0, KEYLENGTH, cancel);
+                await file.WriteAsync(_encryptionKey.Value.Buffer, 0, KEYLENGTH, cancel);
+                await file.WriteAsync(_hmacKey.Value.Buffer, 0, KEYLENGTH, cancel);
                 await file.FlushAsync(cancel);
             }
         }
@@ -267,7 +267,7 @@ namespace NeoSmart.SecureStore
             }
 
             var secure = new SecureBuffer(KEYLENGTH * 2);
-            var buffers = new[] { _encryptionKey?.Buffer, _hmacKey?.Buffer };
+            var buffers = new[] { _encryptionKey.Value.Buffer, _hmacKey.Value.Buffer };
             for (int i = 0; i < buffers.Length; ++i)
             {
                 Array.Copy(buffers[i], 0, secure.Buffer, i * KEYLENGTH, KEYLENGTH);
@@ -298,8 +298,8 @@ namespace NeoSmart.SecureStore
             _encryptionKey = new SecureBuffer(KEYLENGTH);
             _hmacKey = new SecureBuffer(KEYLENGTH);
 
-            Array.Copy(insecure, 0, _encryptionKey?.Buffer, 0, KEYLENGTH);
-            Array.Copy(insecure, KEYLENGTH, _hmacKey?.Buffer, 0, KEYLENGTH);
+            Array.Copy(insecure, 0, _encryptionKey.Value.Buffer, 0, KEYLENGTH);
+            Array.Copy(insecure, KEYLENGTH, _hmacKey.Value.Buffer, 0, KEYLENGTH);
         }
 
         // Derive an encryption key from a password
@@ -396,7 +396,7 @@ namespace NeoSmart.SecureStore
             }
         }
 
-        private void CheckUpgrade(string password = null)
+        private void CheckUpgrade(string? password = null)
         {
             if (_vaultUpgradePending && _vault is not null && _encryptionKey is not null)
             {
@@ -451,7 +451,7 @@ namespace NeoSmart.SecureStore
             return true;
         }
 
-        public bool TryGetValue<T>(string key, out T value)
+        public bool TryGetValue<T>(string key, out T? value)
         {
             if (!_vault.Data.ContainsKey(key))
             {
@@ -491,7 +491,7 @@ namespace NeoSmart.SecureStore
             }
         }
 
-        public bool TryGetValue<T>(string key, TryDeserializeFunc<T> deserialize, out T value)
+        public bool TryGetValue<T>(string key, TryDeserializeFunc<T> deserialize, out T? value)
         {
             if (!TryGetBytes(key, out var buffer))
             {
@@ -508,7 +508,7 @@ namespace NeoSmart.SecureStore
             return false;
         }
 
-        public bool TryGetValue<T>(string key, DeserializeFunc<T> deserialize, out T value)
+        public bool TryGetValue<T>(string key, DeserializeFunc<T> deserialize, out T? value)
         {
             if (!TryGetBytes(key, out var encoded))
             {
@@ -544,7 +544,7 @@ namespace NeoSmart.SecureStore
             if (typeof(T) == typeof(string))
             {
                 // Strings must always be serialized as UTF-8 without a BOM
-                var @string = (string)(object)value;
+                var @string = (string)(object)value!;
                 var byteCount = DefaultEncoding.GetByteCount(@string);
                 using (var secure = new SecureBuffer(byteCount))
                 {
@@ -554,7 +554,7 @@ namespace NeoSmart.SecureStore
             }
             else if (typeof(T) == typeof(byte[]))
             {
-                var bytes = (byte[])(object)value;
+                var bytes = (byte[])(object)value!;
                 using (var buffer = SecureBuffer.From(bytes))
                 {
                     Set(key, buffer);
@@ -606,7 +606,7 @@ namespace NeoSmart.SecureStore
             using (var aes = Aes.Create())
             {
                 aes.Mode = CipherMode.CBC;
-                aes.Key = _encryptionKey?.Buffer;
+                aes.Key = _encryptionKey!.Value.Buffer;
                 aes.BlockSize = 128;
                 aes.GenerateIV();
 
@@ -625,13 +625,13 @@ namespace NeoSmart.SecureStore
 
         private byte[] Authenticate(byte[] iv, byte[] encrypted)
         {
-            using var hmac = HMAC.Create("HMACSHA1");
-            hmac.Key = _hmacKey?.Buffer;
+            using var hmac = HMAC.Create("HMACSHA1")!;
+            hmac.Key = _hmacKey!.Value.Buffer;
 
             hmac.TransformBlock(iv, 0, iv.Length, iv, 0);
             hmac.TransformFinalBlock(encrypted, 0, encrypted.Length);
 
-            return hmac.Hash;
+            return hmac.Hash!;
         }
 
         internal SecureBuffer Decrypt(EncryptedBlob blob)
@@ -657,7 +657,7 @@ namespace NeoSmart.SecureStore
 
             using var aes = Aes.Create();
             aes.Mode = CipherMode.CBC;
-            aes.Key = _encryptionKey?.Buffer;
+            aes.Key = _encryptionKey!.Value.Buffer;
             aes.BlockSize = 128;
             aes.IV = blob.IV;
 
@@ -677,13 +677,13 @@ namespace NeoSmart.SecureStore
 
 #region Obsolete
         [Obsolete("Use SecretsManager.TryGetValue(..) instead.")]
-        public bool TryRetrieve<T>(string key, out T value)
+        public bool TryRetrieve<T>(string key, out T? value)
         {
             return TryGetValue<T>(key, out value);
         }
 
         [Obsolete("Use SecretsManager.Get(..) instead.")]
-        public string Retrieve(string key)
+        public string? Retrieve(string key)
         {
             if (!TryGetValue<string>(key, out var result))
             {
