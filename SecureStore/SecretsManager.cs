@@ -28,6 +28,7 @@ namespace NeoSmart.SecureStore
         private const int KEYLENGTH = 128 / 8;
         private const int PBKDF2ROUNDS = 256000;
         private const int IVSIZE = 16;
+        private const int MAX_KEY_SIZE = 2048;
 
         private Vault _vault = null!;
         private SecureBuffer? _encryptionKey;
@@ -122,17 +123,66 @@ namespace NeoSmart.SecureStore
             // Avoid excess buffering where possible, even if it's slower.
             using (var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.None))
             {
-                if (file.Length != KEYLENGTH * KEYCOUNT)
+                if (file.Length == KEYLENGTH * KEYCOUNT)
+                {
+                    LoadLegacyKeyFromStream(file);
+                }
+                else if (file.Length > KEYLENGTH * KEYCOUNT)
+                {
+                    LoadPemKeyFromStream(file);
+                }
+                else
                 {
                     throw new InvalidKeyFileException();
                 }
-
-                LoadKeyFromStream(file);
             }
         }
 
-        // Load an encryption key from a file
         public void LoadKeyFromStream(Stream stream)
+        {
+            using var mstream = new MemoryStream();
+
+            var buffer = new byte[4096];
+            int bytesRead = 0;
+            while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) != 0)
+            {
+                mstream.Write(buffer, 0, bytesRead);
+                if (mstream.Length > MAX_KEY_SIZE)
+                {
+                    throw new InvalidKeyFileException("Key from stream is too large!");
+                }
+            }
+
+            if (mstream.Length == KEYLENGTH * KEYCOUNT)
+            {
+                LoadLegacyKeyFromStream(mstream);
+            }
+            else if (mstream.Length > KEYLENGTH * KEYCOUNT)
+            {
+                LoadPemKeyFromStream(mstream);
+            }
+            else
+            {
+                throw new InvalidKeyFileException();
+            }
+        }
+
+        private void LoadPemKeyFromStream(Stream stream)
+        {
+            if (_encryptionKey != null)
+            {
+                throw new KeyAlreadyLoadedException();
+            }
+
+            var pemReader = new PemReader();
+            var insecure = pemReader.Read(stream);
+            SplitAndLoadKey(insecure);
+
+            CheckUpgrade();
+        }
+
+        // Load an encryption key from a file
+        private void LoadLegacyKeyFromStream(Stream stream)
         {
             if (_encryptionKey != null)
             {
@@ -178,16 +228,65 @@ namespace NeoSmart.SecureStore
             // Avoid excess buffering where possible, even if it's slower.
             using (var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous))
             {
-                if (file.Length != KEYLENGTH * KEYCOUNT)
+                if (file.Length == KEYLENGTH * KEYCOUNT)
+                {
+                    await LoadLegacyKeyFromStreamAsync(file, cancel);
+                }
+                else if (file.Length > KEYLENGTH * KEYCOUNT)
+                {
+                    await LoadPemKeyFromStreamAsync(file, cancel);
+                }
+                else
                 {
                     throw new InvalidKeyFileException();
                 }
-
-                await LoadKeyFromStreamAsync(file, cancel);
             }
         }
 
         public async Task LoadKeyFromStreamAsync(Stream stream, CancellationToken cancel = default)
+        {
+            using var mstream = new MemoryStream();
+
+            var buffer = new byte[4096];
+            int bytesRead = 0;
+            while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, cancel)) != 0)
+            {
+                await mstream.WriteAsync(buffer, 0, bytesRead, cancel);
+                if (mstream.Length > MAX_KEY_SIZE)
+                {
+                    throw new InvalidKeyFileException("Key from stream is too large!");
+                }
+            }
+
+            if (mstream.Length == KEYLENGTH * KEYCOUNT)
+            {
+                await LoadLegacyKeyFromStreamAsync(mstream, cancel);
+            }
+            else if (mstream.Length > KEYLENGTH * KEYCOUNT)
+            {
+                await LoadPemKeyFromStreamAsync(mstream, cancel);
+            }
+            else
+            {
+                throw new InvalidKeyFileException();
+            }
+        }
+
+        private async Task LoadPemKeyFromStreamAsync(Stream stream, CancellationToken cancel = default)
+        {
+            if (_encryptionKey != null)
+            {
+                throw new KeyAlreadyLoadedException();
+            }
+
+            var pemReader = new PemReader();
+            var insecure = await pemReader.ReadAsync(stream, cancel);
+            SplitAndLoadKey(insecure);
+
+            CheckUpgrade();
+        }
+
+        private async Task LoadLegacyKeyFromStreamAsync(Stream stream, CancellationToken cancel = default)
         {
             if (_encryptionKey != null)
             {
@@ -236,9 +335,14 @@ namespace NeoSmart.SecureStore
             // We don't know how .NET buffers things in memory, so we write it ourselves for maximum security.
             // Avoid excess buffering where possible, even if it's slower.
             using (var file = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough))
+            using (var mstream = new MemoryStream(KEYCOUNT * KEYLENGTH))
             {
-                file.Write(_encryptionKey.Value.Buffer, 0, KEYLENGTH);
-                file.Write(_hmacKey.Value.Buffer, 0, KEYLENGTH);
+                mstream.Write(_encryptionKey.Value.Buffer, 0, KEYLENGTH);
+                mstream.Write(_hmacKey.Value.Buffer, 0, KEYLENGTH);
+
+                var pemWriter = new PemWriter();
+                pemWriter.Write(file, mstream.GetBuffer().AsMemory(0, KEYCOUNT * KEYLENGTH));
+                file.Flush();
             }
         }
 
@@ -252,9 +356,13 @@ namespace NeoSmart.SecureStore
             // We don't know how .NET buffers things in memory, so we write it ourselves for maximum security.
             // Avoid excess buffering where possible, even if it's slower.
             using (var file = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough | FileOptions.Asynchronous))
+            using (var mstream = new MemoryStream(KEYCOUNT * KEYLENGTH))
             {
-                await file.WriteAsync(_encryptionKey.Value.Buffer, 0, KEYLENGTH, cancel);
-                await file.WriteAsync(_hmacKey.Value.Buffer, 0, KEYLENGTH, cancel);
+                await mstream.WriteAsync(_encryptionKey.Value.Buffer, 0, KEYLENGTH, cancel);
+                await mstream.WriteAsync(_hmacKey.Value.Buffer, 0, KEYLENGTH, cancel);
+
+                var pemWriter = new PemWriter();
+                await pemWriter.WriteAsync(file, mstream.GetBuffer().AsMemory(0, KEYCOUNT * KEYLENGTH), cancel);
                 await file.FlushAsync(cancel);
             }
         }

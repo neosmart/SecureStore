@@ -43,7 +43,13 @@
       </PackageReference>
   </ItemGroup>
 
-  <ItemGroup>
+	<ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+		<PackageReference Include="System.Memory">
+			<Version>4.5.5</Version>
+		</PackageReference>
+	</ItemGroup>
+
+	<ItemGroup>
     <Folder Include="Properties\" />
   </ItemGroup>
 
