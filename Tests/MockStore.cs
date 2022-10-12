@@ -5,7 +5,6 @@ using System.Text;
 
 namespace Tests
 {
-
     class MockStore
     {
         [JsonProperty(PropertyName = "secrets")]
@@ -15,6 +14,7 @@ namespace Tests
         [JsonProperty(PropertyName = "iv")]
         internal byte[] IV { get; set; }
 
+#pragma warning disable CS0649
         internal class EncryptedBlob
         {
             [JsonProperty(PropertyName = "iv")]
@@ -24,5 +24,6 @@ namespace Tests
             [JsonProperty(PropertyName = "payload")]
             public byte[] Payload;
         }
+#pragma warning restore CS0649
     }
 }
