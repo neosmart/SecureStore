@@ -113,7 +113,7 @@ namespace NeoSmart.SecureStore.Client
             {
                 throw new InvalidOperationException("Only ignore files in the same directory as the path to ignore are currently supported!");
             }
-            if (!File.GetAttributes(path).HasFlag(FileAttributes.Normal))
+            if (!File.Exists(path))
             {
                 throw new InvalidOperationException($"The file to ignore \"{path}\" is not a regular file!");
             }
