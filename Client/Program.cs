@@ -175,6 +175,7 @@ namespace NeoSmart.SecureStore.Client
             string? path = null;
             string? password = null;
             string? keyfile = null;
+            string? keyExport = null;
             string? secretName = null;
             string? secretValue = null;
             bool decryptAll = false;
@@ -186,7 +187,8 @@ namespace NeoSmart.SecureStore.Client
                 { "v|version", "Print version information and exit", _ => version = true },
                 { "s|store=", "Load secrets store from provided path", s => path = s },
                 { "p|password:", "Prompt for decryption password", p => password = p ?? "" },
-                { "k|keyfile=", "Load decryption key from path", k => keyfile = k },
+                { "k|keyfile=", "Load/save decryption key from/to path", k => keyfile = k },
+                { "export-key=", "Export a copy of the key to path", k => keyExport = k },
             };
 
             var options = new Dictionary<string, OptionSet>();
@@ -196,6 +198,7 @@ namespace NeoSmart.SecureStore.Client
                 // password is : because automated systems may use the command line to specify passwords. This may change!
                 { "p|password:", "Secure store with a key derived from a password", p => password = p ?? "" },
                 { "k|keyfile=", "Path to load or save secure key from/to", k => keyfile = k },
+                { "export-key=", "Export a copy of the key to path", k => keyExport = k },
             };
 
             options["delete"] = new OptionSet
@@ -205,6 +208,7 @@ namespace NeoSmart.SecureStore.Client
                 // password is : because automated systems may use the command line to specify passwords. This may change!
                 { "p|password:", "Decrypt store with key derived from password", p => password = p ?? "" },
                 { "k|keyfile=", "Path to load secure key from", k => keyfile = k },
+                { "export-key=", "Export a copy of the key to path", k => keyExport = k },
             };
 
             options["get"] = new OptionSet
@@ -215,7 +219,8 @@ namespace NeoSmart.SecureStore.Client
                 { "p|password:", "Decrypt store with key derived from password", p => password = p ?? "" },
                 { "k|keyfile=", "Path to load secure key from", k => keyfile = k },
                 { "a|all", "Decrypt the entire contents of the store and print to stdout", _ => decryptAll = true },
-                { "t|output-format=", "Specify the output format: json (default), text", t => { if (!Parse(t, out format)) throw new ExitCodeException(1, "Unsupported format specified!"); } }
+                { "t|output-format=", "Specify the output format: json (default), text", t => { if (!Parse(t, out format)) throw new ExitCodeException(1, "Unsupported format specified!"); } },
+                { "export-key=", "Export a copy of the key to path", k => keyExport = k },
             };
 
             options["set"] = new OptionSet
@@ -225,6 +230,7 @@ namespace NeoSmart.SecureStore.Client
                 // password is : because automated systems may use the command line to specify passwords. This may change!
                 { "p|password:", "Decrypt store with key derived from password", p => password = p ?? "" },
                 { "k|keyfile=", "Path to load secure key from", k => keyfile = k },
+                { "export-key=", "Export a copy of the key to path", k => keyExport = k },
             };
 
             void printUsage(TextWriter output)
@@ -386,7 +392,7 @@ namespace NeoSmart.SecureStore.Client
                 }
 
                 // We need to differentiate between null (not set) and empty (empty)
-                if (password == string.Empty)
+                if (password == string.Empty && string.IsNullOrEmpty(keyfile))
                 {
                     if (command == "create")
                     {
@@ -410,6 +416,18 @@ namespace NeoSmart.SecureStore.Client
                             password = GetPassword();
                         }
                     }
+                }
+
+                // We store --export-key to its own variable so that it doesn't override our defaulting to password
+                // mode if no key file was specified. After we've decided on whether or not to use a password above,
+                // we can now coalesce the two values.
+                if (keyfile is null && keyExport is not null)
+                {
+                    // We still need to handle the case where keyExport and keyfile are both set (load from a key
+                    // and also export a new copy of that key) - we do that way below.
+                    keyfile = keyExport;
+                    // Set keyExport to null so we can detect keyExport != keyfile by just checking if keyExport is null.
+                    keyExport = null;
                 }
 
                 SecretsManager? sman = null;
@@ -450,7 +468,7 @@ namespace NeoSmart.SecureStore.Client
                         sman.LoadKeyFromPassword(password);
                     }
 
-                    bool keyCreated = false;
+                    string? keyCreated = null;
                     if (command == "create")
                     {
                         if (File.Exists(path) && new FileInfo(path).Length > 0)
@@ -464,18 +482,23 @@ namespace NeoSmart.SecureStore.Client
                             if (File.Exists(keyfile) && new FileInfo(keyfile).Length > 0)
                             {
                                 sman.LoadKeyFromFile(keyfile);
+                                if (keyExport is not null)
+                                {
+                                    sman.ExportKey(keyExport);
+                                    keyCreated = keyExport;
+                                }
                             }
                             else
                             {
                                 sman.GenerateKey();
                                 sman.ExportKey(keyfile);
-                                keyCreated = true;
+                                keyCreated = keyfile;
                             }
                         }
                         else if (!string.IsNullOrEmpty(keyfile))
                         {
                             sman.ExportKey(keyfile);
-                            keyCreated = true;
+                            keyCreated = keyfile;
                         }
                     }
                     else if (password == null && keyfile != null)
@@ -483,12 +506,12 @@ namespace NeoSmart.SecureStore.Client
                         sman.LoadKeyFromFile(keyfile);
                     }
 
-                    if (keyCreated)
+                    if (keyCreated is not null)
                     {
                         var vcsType = GetVcsType(keyfile!);
                         if (vcsType != VcsType.None)
                         {
-                            await AddIgnoreRuleAsync(vcsType, keyfile!, Path.GetDirectoryName(keyfile)!);
+                            await AddIgnoreRuleAsync(vcsType, keyCreated, Path.GetDirectoryName(keyCreated)!);
                         }
                     }
 
