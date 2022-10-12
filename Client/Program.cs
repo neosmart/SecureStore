@@ -117,7 +117,7 @@ namespace NeoSmart.SecureStore.Client
             {
                 throw new InvalidOperationException($"The file to ignore \"{path}\" is not a regular file!");
             }
-            if (File.Exists(ignoreFile) && !File.GetAttributes(ignoreFile).HasFlag(FileAttributes.Normal))
+            if (File.Exists(ignoreFile) && ((File.GetAttributes(ignoreFile) & (FileAttributes.Directory | FileAttributes.ReadOnly | FileAttributes.Device)) != 0))
             {
                 throw new InvalidOperationException($"The ignore file \"{ignoreFile}\" exists and is not a regular file!");
             }
