@@ -24,7 +24,7 @@ The SecureStore.NET library is currently available for all versions of the .NET 
 
 The companion CLI app for creating and managing secrets files can be installed the same way as all the other `dotnet` tools:
 
-    dotnet install --global SecureStore.Client
+    dotnet tool install --global SecureStore.Client
 
 after which it is available for use in your shell as `SecureStore` (e.g. `SecureStore create secrets.json`). More information on using the command line utility can be found [in its documention](./Client).
 
