@@ -1,9 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NeoSmart.SecureStore;
-using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 
 namespace Tests
 {
@@ -15,6 +13,7 @@ namespace Tests
             { "foo1", "bar1" },
             { "foo2", "bar2" },
             { "foo3", "bar3" },
+            { "specialchars", "@lt€r" } // Regression test for #11
         };
 
         [TestMethod]
