@@ -15,6 +15,7 @@ namespace Tests
             { "foo1", "bar1" },
             { "foo2", "bar2" },
             { "foo3", "bar3" },
+            { "specialchars", "@lt€r" }
         };
 
         [TestMethod]
