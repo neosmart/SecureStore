@@ -656,7 +656,7 @@ namespace NeoSmart.SecureStore
                 var byteCount = DefaultEncoding.GetByteCount(@string);
                 using (var secure = new SecureBuffer(byteCount))
                 {
-                    DefaultEncoding.GetBytes(@string, 0, byteCount, secure.Buffer, 0);
+                    DefaultEncoding.GetBytes(@string, 0, @string.Length, secure.Buffer, 0);
                     Set(key, secure);
                 }
             }
