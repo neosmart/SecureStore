@@ -612,7 +612,16 @@ namespace NeoSmart.SecureStore.Client
             }
             foreach (var option in options)
             {
-                output.WriteLine($"\t-{option.GetNames()[0]}  --{option.GetNames()[1]}\t{option.Description}");
+                var names = option.GetNames();
+                if (names.Length > 1)
+                {
+                    output.WriteLine($"\t-{names[0]}  --{names[1]}\t{option.Description}");
+                }
+                else
+                {
+                    output.WriteLine($"\t--{names[0]}\t{option.Description}");
+                }
+
             }
         }
 
