@@ -1,0 +1,60 @@
+# This workflow will build a .NET project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-net
+
+name: .NET
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+
+jobs:
+  linux:
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dotnet: [ '6.0.x' ]
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup .NET
+      id: dotnet-version
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: ${{ matrix.dotnet }}
+    - name: Create temporary global.json
+      run: echo '{"sdk":{"version":"${{ steps.dotnet-version.outputs.dotnet-version }}"}}' > ./global.json
+    - name: Restore dependencies
+      run: dotnet restore
+    - name: Build
+      run: dotnet build --no-restore
+    - name: Test
+      run: dotnet test --no-build --verbosity normal
+
+  windows:
+
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        dotnet: [ '6.0.x' ]
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup .NET
+      id: dotnet-version
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: ${{ matrix.dotnet }}
+    - name: Create temporary global.json
+      run: echo '{"sdk":{"version":"${{ steps.dotnet-version.outputs.dotnet-version }}"}}' > ./global.json
+    - name: Restore dependencies
+      run: dotnet restore
+    - name: Build
+      run: dotnet build --no-restore
+    - name: Test
+      run: dotnet test --no-build --verbosity normal
