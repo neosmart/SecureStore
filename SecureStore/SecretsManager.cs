@@ -470,7 +470,7 @@ namespace NeoSmart.SecureStore
             }
         }
 
-        internal void ValidateSentinel()
+        public void ValidateSentinel()
         {
             if (!_sentinelValidated && !(_vault.Sentinel is null))
             {

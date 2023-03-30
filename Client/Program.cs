@@ -418,18 +418,6 @@ namespace NeoSmart.SecureStore.Client
                     }
                 }
 
-                // We store --export-key to its own variable so that it doesn't override our defaulting to password
-                // mode if no key file was specified. After we've decided on whether or not to use a password above,
-                // we can now coalesce the two values.
-                if (keyfile is null && keyExport is not null)
-                {
-                    // We still need to handle the case where keyExport and keyfile are both set (load from a key
-                    // and also export a new copy of that key) - we do that way below.
-                    keyfile = keyExport;
-                    // Set keyExport to null so we can detect keyExport != keyfile by just checking if keyExport is null.
-                    keyExport = null;
-                }
-
                 SecretsManager? sman = null;
 
                 // Handle parameters specific to certain commands
@@ -466,6 +454,14 @@ namespace NeoSmart.SecureStore.Client
                     if (!string.IsNullOrEmpty(password))
                     {
                         sman.LoadKeyFromPassword(password);
+                        try
+                        {
+                            sman.ValidateSentinel();
+                        }
+                        catch (TamperedCipherTextException)
+                        {
+                            throw new ExitCodeException(1, "Incorrect password!");
+                        }
                     }
 
                     string? keyCreated = null;
@@ -482,11 +478,6 @@ namespace NeoSmart.SecureStore.Client
                             if (File.Exists(keyfile) && new FileInfo(keyfile).Length > 0)
                             {
                                 sman.LoadKeyFromFile(keyfile);
-                                if (keyExport is not null)
-                                {
-                                    sman.ExportKey(keyExport);
-                                    keyCreated = keyExport;
-                                }
                             }
                             else
                             {
@@ -504,6 +495,28 @@ namespace NeoSmart.SecureStore.Client
                     else if (password == null && keyfile != null)
                     {
                         sman.LoadKeyFromFile(keyfile);
+                    }
+
+                    if (password is null && keyfile is not null)
+                    {
+                        try
+                        {
+                            sman.ValidateSentinel();
+                        }
+                        catch (TamperedCipherTextException)
+                        {
+                            throw new ExitCodeException(1, "Incorrect key for store!");
+                        }
+                    }
+
+                    // We store --export-key to its own variable so that it doesn't override our defaulting to password
+                    // mode if no key file was specified. After we've decided on whether or not to use a password above,
+                    // we can now coalesce the two values.
+                    if (keyCreated is null && keyExport is not null && keyExport != keyfile)
+                    {
+                        sman.ExportKey(keyExport);
+                        keyCreated = keyExport;
+                        keyfile = keyExport;
                     }
 
                     if (keyCreated is not null)
