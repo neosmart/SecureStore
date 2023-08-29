@@ -31,19 +31,6 @@
     <PackageIcon>SecureStore.png</PackageIcon>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(TargetFramework)' != 'net40'">
-    <DefineConstants>$(DefineConstants);ASYNC</DefineConstants>
-  </PropertyGroup>
-
-  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard1.3'">
-      <PackageReference Include="Microsoft.AspNetCore.Cryptography.KeyDerivation">
-          <Version>1.1.2</Version>
-      </PackageReference>
-      <PackageReference Include="System.Security.Cryptography.Primitives">
-        <Version>4.3.0</Version>
-      </PackageReference>
-  </ItemGroup>
-
 	<ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
 		<PackageReference Include="System.Memory">
 			<Version>4.5.5</Version>
