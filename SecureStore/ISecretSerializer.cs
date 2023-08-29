@@ -20,7 +20,7 @@ namespace NeoSmart.SecureStore
 
             public T Deserialize<T>(SecureBuffer serialized)
             {
-                return JsonConvert.DeserializeObject<T>(SecretsManager.DefaultEncoding.GetString(serialized.Buffer));
+                return JsonConvert.DeserializeObject<T>(SecretsManager.DefaultEncoding.GetString(serialized.Buffer))!;
             }
         }
     }

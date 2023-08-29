@@ -492,7 +492,7 @@ namespace NeoSmart.SecureStore
             using (var reader = new StreamReader(stream, DefaultEncoding))
             using (var jreader = new JsonTextReader(reader))
             {
-                _vault = JsonSerializer.Create(DefaultJsonSettings).Deserialize<VaultLoader>(jreader);
+                _vault = JsonSerializer.Create(DefaultJsonSettings).Deserialize<VaultLoader>(jreader)!;
                 if (_vault.VaultVersion > Vault.SCHEMAVERSION)
                 {
                     throw VaultVersionException.UnsupportedVersion();
