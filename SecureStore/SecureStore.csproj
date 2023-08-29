@@ -13,7 +13,7 @@
     <Description>A simple but secure secrets manager library for .NET and .NET Core, with on-disk encrypted storage. Securely store passwords and private keys in a git-friendly, human-readable format, optimized for local development and secure remote deployment.</Description>
     <PackageProjectUrl>http://neosmart.net/blog/2020/securestore-open-secrets-format/</PackageProjectUrl>
     <RepositoryUrl>https://github.com/neosmart/SecureStore</RepositoryUrl>
-    <Copyright>Copyright NeoSmart Technologies 2015 - 2022</Copyright>
+    <Copyright>Copyright NeoSmart Technologies 2015 - 2023</Copyright>
     <RepositoryUrl>https://github.com/neosmart/SecureStore</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>secrets, encryption, secure, secrets manager, password,</PackageTags>
