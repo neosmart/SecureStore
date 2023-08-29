@@ -753,6 +753,12 @@ namespace NeoSmart.SecureStore
             }
 
             // Compare without early abort for timing attack resistance
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP2_1_OR_GREATER
+            if (!CryptographicOperations.FixedTimeEquals(calculatedHmac, blob.Hmac))
+            {
+                throw new TamperedCipherTextException();
+            }
+#else
             int mismatches = 0;
             for (int i = 0; i < calculatedHmac.Length; ++i)
             {
@@ -762,6 +768,7 @@ namespace NeoSmart.SecureStore
             {
                 throw new TamperedCipherTextException();
             }
+#endif
 
             using var aes = Aes.Create();
             aes.Mode = CipherMode.CBC;
