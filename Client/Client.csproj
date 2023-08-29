@@ -29,6 +29,7 @@
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>SecureStore</ToolCommandName>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -39,6 +40,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SecureStore\SecureStore.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include=".\README.md" Pack="true" PackagePath="/" />
   </ItemGroup>
 
   <ItemGroup>
