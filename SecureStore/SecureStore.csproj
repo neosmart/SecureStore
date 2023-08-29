@@ -29,6 +29,8 @@
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageIcon>SecureStore.png</PackageIcon>
+    <SignAssembly>True</SignAssembly>
+    <AssemblyOriginatorKeyFile>./SecureStore.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
 
 	<ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
