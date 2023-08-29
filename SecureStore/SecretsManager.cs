@@ -89,7 +89,7 @@ namespace NeoSmart.SecureStore
 
         internal static void GenerateBytes(byte[] buffer)
         {
-#if NET6_0_OR_GREATER
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP2_1_OR_GREATER
             RandomNumberGenerator.Fill(buffer);
 #else
             using var rng = RandomNumberGenerator.Create();

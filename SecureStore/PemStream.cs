@@ -24,7 +24,7 @@ namespace NeoSmart.SecureStore
             Complete,
         }
 
-#if NET6_0_OR_GREATER
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP2_1_OR_GREATER
         private async Task<byte[]> InnerReadAsync(Stream stream, Func<StreamReader, ValueTask<string?>> lineReader)
 #else
         private async Task<byte[]> InnerReadAsync(Stream stream, Func<StreamReader, Task<string?>> lineReader)
@@ -74,8 +74,8 @@ namespace NeoSmart.SecureStore
 
         public byte[] Read(Stream stream)
         {
-#if NET6_0_OR_GREATER
-            return InnerReadAsync(stream, reader => ValueTask.FromResult(reader.ReadLine())).Result;
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP2_1_OR_GREATER
+            return InnerReadAsync(stream, reader => new ValueTask<string?>(reader.ReadLine())).Result;
 #else
             return InnerReadAsync(stream, reader => Task.FromResult<string?>(reader.ReadLine())).Result;
 #endif
@@ -94,7 +94,7 @@ namespace NeoSmart.SecureStore
             Complete,
         }
 
-#if NET6_0_OR_GREATER
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP2_1_OR_GREATER
         private async Task InnerWriteAsync(Stream stream, ReadOnlyMemory<byte> data, Func<StreamWriter, ReadOnlyMemory<char>, ValueTask> lineWriter)
 #else
         private async Task InnerWriteAsync(Stream stream, ReadOnlyMemory<byte> data, Func<StreamWriter, ReadOnlyMemory<char>, Task> lineWriter)
@@ -107,7 +107,7 @@ namespace NeoSmart.SecureStore
 
             // Format the body as base64 with a maximum of 64 characters per line.
             // If we ask .NET to insert line breaks, it'll add one after each 76th character but we want after every 64th character
-#if NET6_0_OR_GREATER
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP2_1_OR_GREATER
             var encoded = Convert.ToBase64String(data.Span, Base64FormattingOptions.None);
 #else
             var encoded = Convert.ToBase64String(data.ToArray(), Base64FormattingOptions.None);
@@ -125,7 +125,7 @@ namespace NeoSmart.SecureStore
 
         public async Task WriteAsync(Stream stream, ReadOnlyMemory<byte> data, CancellationToken cancel = default)
         {
-#if NET6_0_OR_GREATER
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP2_1_OR_GREATER
             await InnerWriteAsync(stream, data, async (writer, line) => await writer.WriteLineAsync(line, cancel));
 #else
             await InnerWriteAsync(stream, data, async (writer, line) => await writer.WriteLineAsync(line.ToString()));
@@ -134,8 +134,8 @@ namespace NeoSmart.SecureStore
 
         public void Write(Stream stream, ReadOnlyMemory<byte> data)
         {
-#if NET6_0_OR_GREATER
-            _ = InnerWriteAsync(stream, data, (writer, line) => { writer.WriteLine(line); return ValueTask.CompletedTask; });
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP2_1_OR_GREATER
+            _ = InnerWriteAsync(stream, data, (writer, line) => { writer.WriteLine(line); return new ValueTask(); });
 #else
             _ = InnerWriteAsync(stream, data, (writer, line) => { writer.WriteLine(line.ToString()); return Task.CompletedTask; });
 #endif
