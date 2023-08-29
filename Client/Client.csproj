@@ -23,7 +23,6 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <StartupObject></StartupObject>
-    <!-- Remember to update the SecureStore dependency version below if needed! -->
     <Version>1.2.0-preview2</Version>
     <DebugSymbols>true</DebugSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
