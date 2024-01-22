@@ -153,6 +153,8 @@ namespace NeoSmart.SecureStore
                 }
             }
 
+            mstream.Seek(0, SeekOrigin.Begin);
+
             if (mstream.Length == KEYLENGTH * KEYCOUNT)
             {
                 LoadLegacyKeyFromStream(mstream);
@@ -257,6 +259,8 @@ namespace NeoSmart.SecureStore
                     throw new InvalidKeyFileException("Key from stream is too large!");
                 }
             }
+
+            mstream.Seek(0, SeekOrigin.Begin);
 
             if (mstream.Length == KEYLENGTH * KEYCOUNT)
             {
