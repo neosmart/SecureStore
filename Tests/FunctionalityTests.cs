@@ -2,6 +2,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NeoSmart.SecureStore;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace Tests
 {
@@ -96,6 +97,48 @@ namespace Tests
                     {
                         Assert.AreEqual(SecureData[key], sman.Get(key), $"Retrieved data for key \"{key}\" does not match stored value!");
                     }
+                }
+            }
+        }
+
+        [TestMethod]
+        public void StoreAndLoadKeyFromStream()
+        {
+            var storePath = Path.GetTempFileName();
+            var keyPath = Path.GetTempFileName();
+
+            CreateTestStore(storePath, keyPath);
+
+            using (var storeStream = new FileStream(storePath, FileMode.Open, FileAccess.Read))
+            using (var keyStream = new FileStream(keyPath, FileMode.Open, FileAccess.Read))
+            using (var sman = SecretsManager.LoadStore(storeStream))
+            {
+                sman.LoadKeyFromStream(keyStream);
+                foreach (var key in SecureData.Keys)
+                {
+                    Assert.AreEqual(SecureData[key], sman.Get(key),
+                        $"Retrieved data for key \"{key}\" does not match stored value!");
+                }
+            }
+        }
+        
+        [TestMethod]
+        public async Task StoreAndLoadKeyFromStreamAsync()
+        {
+            var storePath = Path.GetTempFileName();
+            var keyPath = Path.GetTempFileName();
+
+            CreateTestStore(storePath, keyPath);
+
+            using (var storeStream = new FileStream(storePath, FileMode.Open, FileAccess.Read))
+            using (var keyStream = new FileStream(keyPath, FileMode.Open, FileAccess.Read))
+            using (var sman = SecretsManager.LoadStore(storeStream))
+            {
+                await sman.LoadKeyFromStreamAsync(keyStream);
+                foreach (var key in SecureData.Keys)
+                {
+                    Assert.AreEqual(SecureData[key], sman.Get(key),
+                        $"Retrieved data for key \"{key}\" does not match stored value!");
                 }
             }
         }
