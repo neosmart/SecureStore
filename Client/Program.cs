@@ -350,7 +350,7 @@ namespace NeoSmart.SecureStore.Client
                         secretValue = parts[1];
                         bareArguments.RemoveAt(0);
                     }
-                    else if (bareArguments.Count == 2 && !bareArguments[1].Contains('='))
+                    else if (bareArguments.Count == 2 && !bareArguments[0].Contains('='))
                     {
                         secretName = bareArguments[0];
                         secretValue = bareArguments[1];
