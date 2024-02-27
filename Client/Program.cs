@@ -392,7 +392,7 @@ namespace NeoSmart.SecureStore.Client
                 }
 
                 // We need to differentiate between null (not set) and empty (empty)
-                if (password == string.Empty && string.IsNullOrEmpty(keyfile))
+                if (password == string.Empty && (string.IsNullOrEmpty(keyfile) || !File.Exists(keyfile)))
                 {
                     if (command == "create")
                     {
