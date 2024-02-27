@@ -295,11 +295,11 @@ namespace NeoSmart.SecureStore.Client
                 // It instead requires --password=PASSWORD or --password:PASSWORD or -pPASSWORD
                 var bareArguments = parseOptions.Parse(args);
 
-                if (bareArguments.Count > 0 && password == string.Empty)
+                var passwordMode = password == string.Empty; // instead of null
+                if (bareArguments.Count > 0 && passwordMode)
                 {
                     // Check if this was the standalone password
                     var possibles = new[] { "-p", "--password", "/p", "/password" };
-
                     for (int i = 0; i < args.Count - 1; ++i)
                     {
                         if (!possibles.Contains(args[i]))
@@ -383,16 +383,15 @@ namespace NeoSmart.SecureStore.Client
                     Help(Console.Error, "A path to the secrets store is required!", command, parseOptions);
                 }
 
-                if (keyfile == null && password == null)
+                if (keyfile == null && !passwordMode)
                 {
+                    // Changed: Default to password mode instead of erroring out
                     // Help(Console.Error, "Must specify either --password or --keyfile!", command, parseOptions);
-
-                    // Default to password mode instead of erroring out
                     password = string.Empty;
+                    passwordMode = true;
                 }
 
-                // We need to differentiate between null (not set) and empty (empty)
-                if (password == string.Empty && (string.IsNullOrEmpty(keyfile) || !File.Exists(keyfile)))
+                if (passwordMode)
                 {
                     if (command == "create")
                     {
@@ -423,13 +422,13 @@ namespace NeoSmart.SecureStore.Client
                 // Handle parameters specific to certain commands
                 if (command == "create")
                 {
-                    if (password is null && string.IsNullOrWhiteSpace(keyfile))
+                    if (!passwordMode && string.IsNullOrWhiteSpace(keyfile))
                     {
+                        // This block should no longer be reachable!
                         Console.Error.WriteLine("A newly created store must have one or both of --password and --keyfile specified");
                         Environment.Exit(1);
                     }
-                    if (!string.IsNullOrWhiteSpace(password) && File.Exists(keyfile)
-                        && new FileInfo(keyfile).Length > 0)
+                    if (passwordMode && File.Exists(keyfile) && new FileInfo(keyfile).Length > 0)
                     {
                         Confirm($"Overwrite the existing contents of the key file at {keyfile} " +
                             "with a key derived from the provided password? [yes/no]: ");
@@ -451,9 +450,9 @@ namespace NeoSmart.SecureStore.Client
 
                 using (sman)
                 {
-                    if (!string.IsNullOrEmpty(password))
+                    if (passwordMode)
                     {
-                        sman.LoadKeyFromPassword(password);
+                        sman.LoadKeyFromPassword(password!);
                         try
                         {
                             sman.ValidateSentinel();
@@ -471,7 +470,7 @@ namespace NeoSmart.SecureStore.Client
                         {
                             Confirm($"Overwrite existing store at {path}? [yes/no]: ");
                         }
-                        if (password == null)
+                        if (!passwordMode)
                         {
                             ExitIfNullOrEmpty(keyfile, "A keyfile path is required if no password is provided");
 
@@ -492,12 +491,12 @@ namespace NeoSmart.SecureStore.Client
                             keyCreated = keyfile;
                         }
                     }
-                    else if (password == null && keyfile != null)
+                    else if (!passwordMode && keyfile != null)
                     {
                         sman.LoadKeyFromFile(keyfile);
                     }
 
-                    if (password is null && keyfile is not null)
+                    if (!passwordMode && keyfile is not null)
                     {
                         try
                         {
@@ -512,7 +511,7 @@ namespace NeoSmart.SecureStore.Client
                     // We store --export-key to its own variable so that it doesn't override our defaulting to password
                     // mode if no key file was specified. After we've decided on whether or not to use a password above,
                     // we can now coalesce the two values.
-                    if (keyCreated is null && keyExport is not null && keyExport != keyfile)
+                    if (keyExport is not null && (keyfile is null || keyExport != keyfile))
                     {
                         sman.ExportKey(keyExport);
                         keyCreated = keyExport;
