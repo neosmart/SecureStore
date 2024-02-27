@@ -11,7 +11,7 @@
     <Authors>Mahmoud Al-Qudsi, NeoSmart Technologies</Authors>
     <Product>NeoSmart.SecureStore.Client</Product>
     <Description>The CLI companion utility to NeoSmart SecureStore, for creating and managing secrets stores at the command line.</Description>
-    <Copyright>Copyright NeoSmart Technologies 2018-2023</Copyright>
+    <Copyright>Copyright NeoSmart Technologies 2018-2024</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>http://neosmart.net/blog/2020/securestore-open-secrets-format/</PackageProjectUrl>
     <PackageIcon>SecureStore.png</PackageIcon>
@@ -23,7 +23,7 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <StartupObject></StartupObject>
-    <Version>1.2.1</Version>
+    <Version>1.2.2</Version>
     <DebugSymbols>true</DebugSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <PackAsTool>true</PackAsTool>
