@@ -21,6 +21,8 @@ jobs:
         dotnet: [ '6.0.x' ]
 
     steps:
+    - name: Install dependencies
+      run: sudo apt install -y mono-devel
     - uses: actions/checkout@v3
     - name: Setup .NET
       id: dotnet-version
