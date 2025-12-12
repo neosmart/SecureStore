@@ -65,7 +65,9 @@ namespace NeoSmart.SecureStore
 
         public async Task<byte[]> ReadAsync(Stream stream, CancellationToken cancel = default)
         {
-#if NET6_0_OR_GREATER
+#if NET7_0_OR_GREATER
+            return await InnerReadAsync(stream, async (reader) => await reader.ReadLineAsync(cancel));
+#elif NET6_0_OR_GREATER
             return await InnerReadAsync(stream, async (reader) => await reader.ReadLineAsync().WaitAsync(cancel));
 #else
             return await InnerReadAsync(stream, async (reader) => await reader.ReadLineAsync());
