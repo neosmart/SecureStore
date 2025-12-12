@@ -18,45 +18,47 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        dotnet: [ '6.0.x', '10.0.x' ]
+        dotnet: [ '6.0', '8.0', '10.0' ]
 
     steps:
-    - name: Install dependencies
-      run: sudo apt install -y mono-devel
-    - uses: actions/checkout@v3
+    # - name: Install dependencies
+    #   run: sudo apt install -y mono-devel
+    - uses: actions/checkout@v4
     - name: Setup .NET
-      id: dotnet-version
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v4
+      id: stepid
       with:
         dotnet-version: ${{ matrix.dotnet }}
+    # By default, tests will be executed under the latest installed version!
     - name: Create temporary global.json
-      run: echo '{"sdk":{"version":"${{ steps.dotnet-version.outputs.dotnet-version }}"}}' > ./global.json
-    - name: Restore dependencies
-      run: dotnet restore
-    - name: Build
-      run: dotnet build --no-restore
-    - name: Test
-      run: dotnet test --no-build --verbosity normal
+      run: echo '{"sdk":{"version":"${{steps.stepid.outputs.dotnet-version}}"}}' > ./global.json
+    - name: Restore packages
+      run: dotnet restore -p:TargetFrameworks="net${{ matrix.dotnet }}" -p:LangVersion="latest"
+    - name: Build solution
+      run: dotnet build --no-restore --configuration Release -p:TargetFrameworks="net${{ matrix.dotnet }}" -p:LangVersion="latest" --verbosity normal
+    - name: Run tests
+      run: dotnet test --configuration Release --no-build --verbosity normal -p:TargetFrameworks="net${{ matrix.dotnet }}" -p:LangVersion="latest"
 
   windows:
 
     runs-on: windows-latest
     strategy:
       matrix:
-        dotnet: [ '6.0.x' ]
+        dotnet: [ '6.0', '8.0', '10.0' ]
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Setup .NET
-      id: dotnet-version
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v4
+      id: stepid
       with:
         dotnet-version: ${{ matrix.dotnet }}
+    # By default, tests will be executed under the latest installed version!
     - name: Create temporary global.json
-      run: echo '{"sdk":{"version":"${{ steps.dotnet-version.outputs.dotnet-version }}"}}' > ./global.json
-    - name: Restore dependencies
-      run: dotnet restore
-    - name: Build
-      run: dotnet build --no-restore
-    - name: Test
-      run: dotnet test --no-build --verbosity normal
+      run: echo '{"sdk":{"version":"${{steps.stepid.outputs.dotnet-version}}"}}' > ./global.json
+    - name: Restore packages
+      run: dotnet restore -p:TargetFrameworks="net${{ matrix.dotnet }}" -p:LangVersion="latest"
+    - name: Build solution
+      run: dotnet build --no-restore --configuration Release -p:TargetFrameworks="net${{ matrix.dotnet }}" -p:LangVersion="latest" --verbosity normal
+    - name: Run tests
+      run: dotnet test --configuration Release --no-build --verbosity normal -p:TargetFrameworks="net${{ matrix.dotnet }}" -p:LangVersion="latest"
